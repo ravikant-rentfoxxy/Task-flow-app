@@ -105,7 +105,11 @@ class Pill extends StatelessWidget {
           const SizedBox(width: 6),
         ],
         if (icon != null) ...[Icon(icon, size: 13, color: fg), const SizedBox(width: 4)],
-        Text(label, style: TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 0.1)),
+        Flexible(
+          child: Text(label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 0.1)),
+        ),
       ]),
     );
     if (onTap == null) return child;
@@ -147,34 +151,32 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(children: [
         if (icon != null) ...[
           Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, size: 15, color: color),
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(width: 10),
         ],
         Flexible(
-          flex: 6,
-          child: Text(title.toUpperCase(),
+          child: Text(title,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: TF.inkSoft)),
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: TF.ink)),
         ),
         if (count != null) ...[
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-            decoration: BoxDecoration(color: TF.sunken, borderRadius: BorderRadius.circular(99)),
-            child: Text('$count', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: TF.inkSoft)),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+            decoration: BoxDecoration(color: TF.primarySoft, borderRadius: BorderRadius.circular(99)),
+            child: Text('$count', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: TF.primaryDeep)),
           ),
         ],
-        const SizedBox(width: 10),
-        const Expanded(flex: 1, child: Divider()),
-        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+        const Spacer(),
+        ?trailing,
       ]),
     );
   }
@@ -679,6 +681,8 @@ class Surface extends StatelessWidget {
           color: color,
           borderRadius: BorderRadius.circular(TF.radius),
           border: Border.all(color: borderColor),
+          // Raised white cards, flat tinted ones — same as the dashboard.
+          boxShadow: color == TF.surface ? Brand.shadow : null,
         ),
         child: child,
       );

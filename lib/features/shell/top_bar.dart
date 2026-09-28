@@ -16,14 +16,22 @@ class TopBar extends StatelessWidget implements PreferredSizeWidget {
   final PreferredSizeWidget? bottom;
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
+  Size get preferredSize => Size.fromHeight(68 + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      title: Text(title),
-      bottom: bottom,
-      actions: [...actions, const NotificationBell(), const AccountButton(), const SizedBox(width: 8)],
+    return Material(
+      color: Colors.white,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Brand.line))),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(height: 67, child: _BrandRow(subtitle: title, actions: actions)), // 68 minus the 1px border
+            ?bottom,
+          ]),
+        ),
+      ),
     );
   }
 }
@@ -94,4 +102,105 @@ class AccountButton extends StatelessWidget {
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Avatar(me.name, size: 34, dark: true)),
     );
   }
+}
+
+/// White header with the TF tile, "TaskFlow" and the screen name, plus bell and account.
+/// White header with the TF tile, "TaskFlow" and the screen name, plus bell and account.
+class BrandTopBar extends StatelessWidget implements PreferredSizeWidget {
+  const BrandTopBar({super.key, required this.subtitle});
+  final String subtitle;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(68);
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    child: SafeArea(
+      bottom: false,
+      child: Container(
+        height: 68,
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Brand.line))),
+        child: _BrandRow(subtitle: subtitle),
+      ),
+    ),
+  );
+}
+
+/// Back (when pushed) · TF tile · TaskFlow / [subtitle] ······ [actions] · bell · account.
+class _BrandRow extends StatelessWidget {
+  const _BrandRow({required this.subtitle, this.actions = const []});
+  final String subtitle;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+    child: Row(
+      children: [
+        // Pushed screens (e.g. Reports from More) get a back arrow.
+        if (ModalRoute.of(context)?.canPop ?? false)
+          IconButton(
+            tooltip: 'Back',
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Brand.inkSoft),
+            onPressed: () => Navigator.maybePop(context),
+          ),
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: Brand.ink, borderRadius: BorderRadius.circular(11)),
+          child: const Text('TF', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'TaskFlow',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: Brand.ink, height: 1.1),
+              ),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: Brand.muted, letterSpacing: 0.2),
+              ),
+            ],
+          ),
+        ),
+        ...actions,
+        const NotificationBell(),
+        const AccountButton(),
+        const SizedBox(width: 4),
+      ],
+    ),
+  );
+}
+
+/// AppBar title for pushed pages: small TF tile + [child] (usually the page name).
+class BrandTitle extends StatelessWidget {
+  const BrandTitle({super.key, required this.child});
+  BrandTitle.text(String text, {super.key}) : child = Text(text, overflow: TextOverflow.ellipsis);
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: Brand.ink, borderRadius: BorderRadius.circular(9)),
+        child: const Text('TF', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
+      ),
+      const SizedBox(width: 10),
+      Flexible(child: child),
+    ],
+  );
 }

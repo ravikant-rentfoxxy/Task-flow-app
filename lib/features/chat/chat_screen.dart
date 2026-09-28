@@ -113,17 +113,22 @@ class _ChatScreenState extends State<ChatScreen> {
       final wide = c.maxWidth >= 900;
       final list = RefreshIndicator(
         onRefresh: _load,
-        child: ListView(padding: const EdgeInsets.fromLTRB(12, 4, 12, 24), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 24), children: [
           TextField(
             key: const Key('chat-search'),
-            decoration: const InputDecoration(hintText: 'Search people or groups…', prefixIcon: Icon(Icons.search_rounded, size: 20)),
+            decoration: InputDecoration(
+              hintText: 'Search people or groups…',
+              prefixIcon: const Icon(Icons.search_rounded, size: 22),
+              fillColor: TF.surface,
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: TF.line)),
+            ),
             onChanged: (v) => setState(() => query = v),
           ),
           const SizedBox(height: 12),
           if (conversations == null && error == null) const SkeletonList(height: 62),
           if (error != null && conversations == null) ErrorView(message: error!, onRetry: _load),
           if (convs.isNotEmpty) ...[
-            const Padding(padding: EdgeInsets.fromLTRB(4, 4, 4, 6), child: Text('RECENT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: TF.muted))),
+            const Padding(padding: EdgeInsets.fromLTRB(4, 4, 4, 6), child: Text('RECENT', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 1, color: TF.primaryDeep))),
             for (final conv in convs)
               _ConvTile(
                 key: ValueKey('conv-${conv.id}'),
@@ -143,7 +148,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
           ],
           if (people.isNotEmpty) ...[
-            const Padding(padding: EdgeInsets.fromLTRB(4, 14, 4, 6), child: Text('PEOPLE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: TF.muted))),
+            const Padding(padding: EdgeInsets.fromLTRB(4, 14, 4, 6), child: Text('PEOPLE', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 1, color: TF.primaryDeep))),
             for (final t in people)
               _ConvTile(
                 key: ValueKey('person-${t.id}'),
@@ -209,14 +214,21 @@ class _ConvTile extends StatelessWidget {
   final bool selected;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: selected ? TF.primarySoft : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? TF.primary.withValues(alpha: 0.35) : TF.line),
+          boxShadow: Brand.shadow,
+        ),
+        child: Material(
+        color: selected ? TF.primarySoft : TF.surface,
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             child: Row(children: [
               group
                   ? Container(
@@ -247,7 +259,7 @@ class _ConvTile extends StatelessWidget {
                     if (unread > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(color: TF.coral, borderRadius: BorderRadius.circular(99)),
+                        decoration: BoxDecoration(color: TF.primary, borderRadius: BorderRadius.circular(99)),
                         child: Text(unread > 9 ? '9+' : '$unread',
                             style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
                       ),
@@ -256,6 +268,7 @@ class _ConvTile extends StatelessWidget {
               ),
             ]),
           ),
+        ),
         ),
       );
 }

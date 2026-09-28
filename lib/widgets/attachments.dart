@@ -96,6 +96,7 @@ class _ImageViewer extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
+          shape: const Border(),
           title: Text(attachment.fileName, style: const TextStyle(color: Colors.white, fontSize: 15)),
         ),
         body: InteractiveViewer(

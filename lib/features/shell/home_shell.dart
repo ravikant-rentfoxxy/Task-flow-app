@@ -163,8 +163,7 @@ class _HomeShellState extends State<HomeShell> {
                   ),
                 ),
                 destinations: [
-                  for (final d in dests)
-                    NavigationRailDestination(icon: icon(d, false), selectedIcon: icon(d, true), label: Text(d.label)),
+                  for (final d in dests) NavigationRailDestination(icon: icon(d, false), selectedIcon: icon(d, true), label: Text(d.label)),
                 ],
               ),
               const VerticalDivider(width: 1),
@@ -177,21 +176,35 @@ class _HomeShellState extends State<HomeShell> {
       return Scaffold(
         body: stack,
         bottomNavigationBar: DecoratedBox(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: TF.line)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: const Border(top: BorderSide(color: Brand.line)),
+            boxShadow: [BoxShadow(color: Brand.ink.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, -4))],
           ),
-          child: NavigationBar(
-            selectedIndex: index,
-            onDestinationSelected: (i) => shell.go(dests[i].id),
-            destinations: [
-              for (final d in dests)
-                NavigationDestination(
-                  key: ValueKey('nav-${d.id}'),
-                  icon: icon(d, false),
-                  selectedIcon: icon(d, true),
-                  label: d.label,
+          child: NavigationBarTheme(
+            data: NavigationBarThemeData(
+              backgroundColor: Colors.white,
+              indicatorColor: Brand.primarySoft,
+              height: 70,
+              labelTextStyle: WidgetStateProperty.resolveWith(
+                (s) => TextStyle(
+                  fontSize: 12,
+                  fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+                  color: s.contains(WidgetState.selected) ? Brand.primary : Brand.inkSoft,
                 ),
-            ],
+              ),
+              iconTheme: WidgetStateProperty.resolveWith(
+                (s) => IconThemeData(color: s.contains(WidgetState.selected) ? Brand.primary : Brand.inkSoft, size: 25),
+              ),
+            ),
+            child: NavigationBar(
+              selectedIndex: index,
+              onDestinationSelected: (i) => shell.go(dests[i].id),
+              destinations: [
+                for (final d in dests)
+                  NavigationDestination(key: ValueKey('nav-${d.id}'), icon: icon(d, false), selectedIcon: icon(d, true), label: d.label),
+              ],
+            ),
           ),
         ),
       );
@@ -208,8 +221,9 @@ class _Brand extends StatelessWidget {
     final logo = Container(
       width: 40,
       height: 40,
-      decoration: BoxDecoration(color: TF.ink, borderRadius: BorderRadius.circular(12)),
-      child: const Icon(Icons.check_rounded, color: Color(0xFF7FE0C4), size: 24),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: TF.ink, borderRadius: BorderRadius.circular(11)),
+      child: const Text('TF', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
     );
     if (!extended) return logo;
     return Row(
@@ -240,7 +254,7 @@ class MoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: const TopBar(title: 'More'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
           if (me != null)
             Surface(
@@ -312,14 +326,7 @@ class MoreScreen extends StatelessWidget {
 }
 
 class _MoreTile extends StatelessWidget {
-  const _MoreTile({
-    super.key,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  const _MoreTile({super.key, required this.icon, required this.color, required this.title, required this.subtitle, required this.onTap});
   final IconData icon;
   final Color color;
   final String title;
@@ -340,13 +347,14 @@ class _MoreTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(TF.radius),
             border: Border.all(color: TF.line),
+            boxShadow: Brand.shadow,
           ),
           child: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
                 child: Icon(icon, color: color),
               ),
               const SizedBox(width: 14),

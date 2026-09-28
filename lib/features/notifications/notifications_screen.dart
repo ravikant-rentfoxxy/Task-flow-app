@@ -11,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../chat/chat_screen.dart';
 import '../tasks/task_detail_screen.dart';
+import '../shell/top_bar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -65,7 +66,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unread = (list ?? []).where((n) => !n.isRead).length + Get.find<ChatUnreadController>().total;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: BrandTitle.text('Notifications'),
         actions: [
           TextButton(
             key: const Key('mark-all-read'),
@@ -86,14 +87,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _load,
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 24), children: [
           PageBody(
             maxWidth: 720,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (unread > 0)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Text('$unread unread', style: const TextStyle(color: TF.muted, fontWeight: FontWeight.w600)),
+                  child: Text('$unread unread'.toUpperCase(),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1, color: TF.primaryDeep)),
                 ),
               if (chat.isNotEmpty) ...[
                 const SectionHeader(title: 'Chat', icon: Icons.forum_outlined, color: TF.sky),
@@ -103,7 +105,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     title: e.name,
                     body: e.preview,
                     unread: true,
-                    trailing: e.count > 1 ? Pill('${e.count}', fg: Colors.white, bg: TF.ink) : null,
+                    trailing: e.count > 1 ? Pill('${e.count}', fg: Colors.white, bg: TF.primary) : null,
                     onTap: () {
                       Get.find<ChatUnreadController>().markRead(e.conversationId);
                       openChatConversation(context, e.conversationId);
@@ -150,25 +152,32 @@ class _Tile extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 8),
         child: Material(
           color: unread ? TF.primarySoft.withValues(alpha: 0.6) : TF.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: unread ? TF.primary.withValues(alpha: 0.18) : TF.line),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: unread ? TF.primary.withValues(alpha: 0.2) : TF.line),
+                boxShadow: unread ? null : Brand.shadow,
               ),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(emoji, style: const TextStyle(fontSize: 20)),
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: unread ? TF.surface : TF.sunken, shape: BoxShape.circle),
+                  child: Text(emoji, style: const TextStyle(fontSize: 19)),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title, style: TextStyle(fontWeight: unread ? FontWeight.w700 : FontWeight.w500, color: TF.ink, fontSize: 14)),
+                    Text(title, style: TextStyle(fontWeight: unread ? FontWeight.w700 : FontWeight.w600, color: TF.ink, fontSize: 15)),
                     if (body != null && body!.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(body!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: TF.muted)),
+                      Text(body!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, height: 1.35, color: TF.muted)),
                     ],
                     if (time != null) ...[
                       const SizedBox(height: 4),

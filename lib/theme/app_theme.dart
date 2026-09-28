@@ -1,20 +1,52 @@
 import 'package:flutter/material.dart';
 
-/// TaskFlow light palette: warm paper background, ink text, evergreen primary,
-/// coral reserved for urgency.
-class TF {
-  static const paper = Color(0xFFF7F6F2);
-  static const surface = Color(0xFFFFFFFF);
-  static const sunken = Color(0xFFF0EEE8);
-  static const line = Color(0xFFE6E3DB);
-  static const ink = Color(0xFF17191E);
-  static const inkSoft = Color(0xFF3D414B);
-  static const muted = Color(0xFF7A7F8A);
-  static const faint = Color(0xFFA9ADB5);
+/// Indigo-on-lavender tokens for the redesigned screens (sign-in, dashboard).
+class Brand {
+  static const bg = Color(0xFFF7F7FC);
+  static const card = Color(0xFFFFFFFF);
+  static const line = Color(0xFFECEDF5);
+  static const ink = Color(0xFF111827);
+  static const inkSoft = Color(0xFF374151);
+  static const muted = Color(0xFF6B7280);
+  static const faint = Color(0xFF9CA3AF);
+  static const primary = Color(0xFF4F46E5);
+  static const primaryDeep = Color(0xFF3B2FD9);
+  static const primarySoft = Color(0xFFE8E9FB);
+  static const field = Color(0xFFF1F2FB);
+  static const sky = Color(0xFF2B9BE8);
+  static const skySoft = Color(0xFFDDEFFC);
+  static const red = Color(0xFFC81E1E);
+  static const redSoft = Color(0xFFFDE8E8);
+  static const redPanel = Color(0xFFFCEEF0);
+  static const amber = Color(0xFFB7791F);
+  static const amberSoft = Color(0xFFFEF3D7);
+  static const slate = Color(0xFF5B6170);
+  static const slateSoft = Color(0xFFE9EAF3);
+  static const green = Color(0xFF15803D);
+  static const greenSoft = Color(0xFFDCF7E6);
 
-  static const primary = Color(0xFF0F6E5C);
-  static const primarySoft = Color(0xFFE3F1EC);
-  static const primaryDeep = Color(0xFF0A4F42);
+  static const radius = 18.0;
+
+  static List<BoxShadow> get shadow => [
+    BoxShadow(color: const Color(0xFF4F46E5).withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8)),
+  ];
+}
+
+/// TaskFlow light palette, aligned with [Brand]: lavender background, ink text,
+/// indigo primary, coral reserved for urgency.
+class TF {
+  static const paper = Brand.bg;
+  static const surface = Color(0xFFFFFFFF);
+  static const sunken = Brand.field;
+  static const line = Brand.line;
+  static const ink = Brand.ink;
+  static const inkSoft = Brand.inkSoft;
+  static const muted = Brand.muted;
+  static const faint = Brand.faint;
+
+  static const primary = Brand.primary;
+  static const primarySoft = Brand.primarySoft;
+  static const primaryDeep = Brand.primaryDeep;
 
   static const coral = Color(0xFFE8553B);
   static const coralSoft = Color(0xFFFDECE7);
@@ -27,7 +59,7 @@ class TF {
   static const green = Color(0xFF1E9E61);
   static const greenSoft = Color(0xFFE2F5EA);
 
-  static const radius = 16.0;
+  static const radius = Brand.radius;
   static const radiusSm = 10.0;
 
   static ({Color fg, Color bg}) status(String s) => switch (s) {
@@ -84,7 +116,7 @@ class TF {
       labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: muted),
     );
 
-    final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSm + 2));
+    final rounded = RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
 
     return ThemeData(
       useMaterial3: true,
@@ -93,7 +125,8 @@ class TF {
       textTheme: text,
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
-        backgroundColor: paper,
+        backgroundColor: surface,
+        shape: Border(bottom: BorderSide(color: line)),
         surfaceTintColor: Colors.transparent,
         foregroundColor: ink,
         elevation: 0,
@@ -116,7 +149,7 @@ class TF {
         style: FilledButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size(0, 46),
+          minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: 18),
           shape: rounded,
           textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
@@ -142,22 +175,23 @@ class TF {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        fillColor: sunken,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         hintStyle: const TextStyle(color: faint, fontSize: 14),
         labelStyle: const TextStyle(color: muted),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusSm + 2), borderSide: const BorderSide(color: line)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusSm + 2), borderSide: const BorderSide(color: line)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusSm + 2),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: primary, width: 1.6),
         ),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusSm + 2), borderSide: const BorderSide(color: coral)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: coral)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        selectedColor: ink,
+        selectedColor: primary,
         side: const BorderSide(color: line),
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: inkSoft),
         secondaryLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),

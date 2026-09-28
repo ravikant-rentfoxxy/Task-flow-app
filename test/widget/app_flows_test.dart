@@ -60,6 +60,8 @@ void main() {
       await tapOn(t, find.byKey(const Key('reset-submit')));
       expect(b.last('POST', '/auth/reset-password').body,
           {'email': 'neha@rentfoxxy.com', 'otp': '123456', 'newPassword': 'newpass1', 'confirmPassword': 'newpass1'});
+      expect(find.text('Welcome back'), findsOneWidget);
+      expect(b.where('POST', '/auth/login'), isEmpty);
       await t.pump(const Duration(seconds: 31));
       await teardownApp(t);
     });
@@ -80,8 +82,8 @@ void main() {
       testWidgets('metrics and sections render (${size.width.toInt()}px)', (t) async {
         final b = FakeBackend();
         await bootApp(t, b, size: size);
-        expect(find.textContaining('ACCEPT RESPONSE'), findsOneWidget);
-        expect(find.textContaining('ESCALATED · EXPLANATION'), findsOneWidget);
+        expect(find.text('30-min SLA'), findsOneWidget, reason: 'accept response section');
+        expect(find.textContaining('Explanation required'), findsOneWidget, reason: 'escalated panel');
         expect(find.text('Follow up corporate leads'), findsOneWidget);
         expect(find.text('Delegated audit'), findsOneWidget, reason: 'assigned by me · open');
         final metric = t.widget<Text>(find.descendant(of: find.byKey(const Key('metric-accept')), matching: find.text('1')));
@@ -126,6 +128,7 @@ void main() {
       await tapText(t, 'Discuss');
       expect(b.last('GET', '/tasks').query['status'], 'DISCUSS');
 
+      await tapOn(t, find.byKey(const Key('due-filter')));
       await tapOn(t, find.byKey(const Key('due-today')));
       expect(b.last('GET', '/tasks').query.keys, containsAll(['dueFrom', 'dueTo']));
 
@@ -209,6 +212,7 @@ void main() {
       await bootApp(t, b);
       await tapOn(t, find.byKey(const Key('dashboard-new-task')));
       await t.enterText(find.byKey(const Key('composer-title')), 'Parent');
+      await t.pumpAndSettle(); // let the focused field finish scrolling itself into view
       await tapOn(t, find.byKey(const Key('composer-subtasks-toggle')));
       await reveal(t, find.byKey(const Key('composer-subtask-input')));
       await t.enterText(find.byKey(const Key('composer-subtask-input')), 'Step one');

@@ -83,14 +83,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         key: const Key('new-project'),
         heroTag: 'new-project',
         onPressed: _create,
-        backgroundColor: TF.ink,
+        backgroundColor: TF.primary,
         foregroundColor: Colors.white,
+        elevation: 4,
+        shape: const StadiumBorder(),
         icon: const Icon(Icons.create_new_folder_outlined),
         label: const Text('New project', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
-        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 96), children: [
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 104), children: [
           PageBody(
             child: list == null
                 ? (error != null ? ErrorView(message: error!, onRetry: _load) : const SkeletonList(height: 110))
@@ -130,21 +132,30 @@ class _ProjectCard extends StatelessWidget {
         },
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(TF.radius), border: Border.all(color: TF.line)),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(TF.radius),
+            border: Border.all(color: TF.line),
+            boxShadow: Brand.shadow,
+          ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: hue.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: hue.withValues(alpha: 0.12), shape: BoxShape.circle),
                 child: Icon(Icons.folder_rounded, color: hue),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(project.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium)),
+              Expanded(
+                child: Text(project.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.2, color: TF.ink)),
+              ),
             ]),
             const SizedBox(height: 10),
             Text(project.description?.isNotEmpty == true ? project.description! : 'No description',
-                maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+                maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, height: 1.4, color: TF.muted)),
             const SizedBox(height: 12),
             Wrap(spacing: 6, runSpacing: 6, children: [
               Pill('${project.memberCount} members', icon: Icons.people_outline_rounded),

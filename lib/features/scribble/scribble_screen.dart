@@ -12,6 +12,7 @@ import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../tasks/composer_sheet.dart';
+import '../shell/top_bar.dart';
 
 class Stroke {
   Stroke({required this.color, required this.width, List<Offset>? points}) : points = points ?? [];
@@ -191,13 +192,15 @@ class _ScribbleScreenState extends State<ScribbleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: InkWell(
+        title: BrandTitle(
+          child: InkWell(
           onTap: _rename,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Flexible(child: Text(boardName, key: const Key('board-name'), overflow: TextOverflow.ellipsis)),
             const SizedBox(width: 6),
             const Icon(Icons.edit_outlined, size: 16, color: TF.muted),
           ]),
+          ),
         ),
         actions: [
           IconButton(key: const Key('boards-open'), tooltip: 'My boards', onPressed: _openBoards, icon: const Icon(Icons.folder_open_rounded)),

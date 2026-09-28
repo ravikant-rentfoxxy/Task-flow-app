@@ -11,6 +11,7 @@ import '../../widgets/common.dart';
 import '../../widgets/files.dart';
 import '../tasks/composer_sheet.dart';
 import '../tasks/task_card.dart';
+import '../shell/top_bar.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   const ProjectDetailScreen({super.key, required this.projectId});
@@ -77,7 +78,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     final d = data;
     if (d == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Project')),
+        appBar: AppBar(title: BrandTitle.text('Project')),
         body: error != null ? ErrorView(message: error!, onRetry: _load) : const Padding(padding: EdgeInsets.all(16), child: SkeletonList()),
       );
     }
@@ -85,7 +86,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(d.project.name),
+          title: BrandTitle.text(d.project.name),
           bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [
             const Tab(text: 'Overview'),
             Tab(key: const Key('project-tab-tasks'), text: 'Tasks (${d.tasks.length})'),
@@ -207,7 +208,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         if (d.tasks.isEmpty)
           const Surface(child: EmptyState(icon: Icons.task_alt_rounded, title: 'No tasks in this project yet'))
         else
-          TaskList(tasks: d.tasks, onChanged: _load),
+          TaskList(tasks: d.tasks, onChanged: _load, roomy: true),
       ]);
 
   Widget _files(ProjectDetail d) => _padded([

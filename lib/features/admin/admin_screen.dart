@@ -80,7 +80,7 @@ class _AdminScreenState extends State<AdminScreen> {
           ? (error != null ? ErrorView(message: error!, onRetry: _load) : const Padding(padding: EdgeInsets.all(16), child: SkeletonList()))
           : RefreshIndicator(
               onRefresh: _load,
-              child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
+              child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
                 PageBody(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     _taskTypes(me!),
@@ -92,7 +92,8 @@ class _AdminScreenState extends State<AdminScreen> {
                     ],
                     const SizedBox(height: 26),
                     const Surface(
-                      color: TF.paper,
+                      color: TF.sunken,
+                      borderColor: Colors.transparent,
                       child: Text(
                         'Working hours: 10:00 – 19:00 IST, Mon–Sat · Response SLA: 30 working minutes · '
                         'Escalation: automatic when a task passes its due date. The backend sweeps SLAs automatically.',
