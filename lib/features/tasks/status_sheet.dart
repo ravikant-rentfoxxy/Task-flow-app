@@ -7,6 +7,7 @@ import '../../core/task_logic.dart';
 import '../../data/taskflow_api.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 
 /// Runs a PATCH /tasks/:id action. Handles the "open subtasks" override prompt.
@@ -133,14 +134,8 @@ class _StatusSheetState extends State<StatusSheet> {
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(t.title, style: Theme.of(context).textTheme.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 12),
-          Row(children: [
-            Text('CURRENT  ', style: Theme.of(context).textTheme.labelSmall),
-            StatusPill(t.status),
-          ]),
+          BrandSectionTitle(title: title, padding: const EdgeInsets.only(bottom: 10)),
+          _summary(t),
           const SizedBox(height: 16),
           if (error != null) InfoBanner(text: error!, fg: TF.coral, bg: TF.coralSoft, icon: Icons.error_outline),
           if (detail == null && error == null) const SkeletonList(count: 2, height: 46),
@@ -164,12 +159,32 @@ class _StatusSheetState extends State<StatusSheet> {
     );
   }
 
+  /// Navy summary card: task title and the current status in lime.
+  Widget _summary(Task t) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(14)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(t.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, height: 1.3, color: Colors.white)),
+          const SizedBox(height: 8),
+          Row(children: [
+            Text('CURRENT',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.6))),
+            const SizedBox(width: 8),
+            Flexible(child: LivePill(label: statusLabel(t.status).toUpperCase())),
+          ]),
+        ]),
+      );
+
   Widget _body(Task t, TaskPermissions perm) {
     switch (view) {
       case _View.actions:
         final buttons = _actionButtons(t, perm);
         if (buttons.isEmpty) {
-          return Text('No status changes available for you on this task.', style: Theme.of(context).textTheme.bodySmall);
+          return const Text('No status changes available for you on this task.', style: TextStyle(fontSize: 12.5, color: Brand.onVariant));
         }
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           for (final b in buttons) Padding(padding: const EdgeInsets.only(bottom: 8), child: b),
@@ -235,19 +250,26 @@ class _StatusSheetState extends State<StatusSheet> {
   }
 
   List<Widget> _actionButtons(Task t, TaskPermissions perm) {
-    Widget primary(String label, VoidCallback onTap, {Color? color, IconData? icon}) => FilledButton.icon(
+    Widget primary(String label, VoidCallback onTap, {IconData? icon}) => FilledButton.icon(
           key: ValueKey('action-$label'),
-          style: color == null ? null : FilledButton.styleFrom(backgroundColor: color),
+          style: _limeButton,
           onPressed: busy ? null : onTap,
           icon: Icon(icon ?? Icons.arrow_forward_rounded, size: 18),
-          label: Text(label),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         );
     Widget secondary(String label, VoidCallback onTap, {bool danger = false, IconData? icon}) => OutlinedButton.icon(
           key: ValueKey('action-$label'),
-          style: danger ? OutlinedButton.styleFrom(foregroundColor: TF.coral) : null,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: danger ? brandRed : Brand.navy,
+            backgroundColor: danger ? const Color(0xFFFEF2F2) : Colors.white,
+            minimumSize: const Size(0, 44),
+            side: BorderSide(color: danger ? brandRed.withValues(alpha: 0.3) : Brand.outline),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
           onPressed: busy ? null : onTap,
           icon: Icon(icon ?? Icons.chevron_right_rounded, size: 18),
-          label: Text(label),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         );
     void editEta() => setState(() {
           eta = t.etaAt;
@@ -257,7 +279,7 @@ class _StatusSheetState extends State<StatusSheet> {
     final out = <Widget>[];
     if (t.status == 'ESCALATED') {
       if (perm.canReject) out.add(secondary('Reject', () => _openReason('reject'), danger: true, icon: Icons.close_rounded));
-      if (perm.canDone) out.add(primary('Mark done', () => _act('done'), color: TF.green, icon: Icons.check_rounded));
+      if (perm.canDone) out.add(primary('Mark done', () => _act('done'), icon: Icons.check_rounded));
       if (perm.canCancel) out.add(secondary('Cancel task', () => _openReason('cancel'), danger: true, icon: Icons.cancel_outlined));
       if (perm.canStart) out.add(primary('Mark in progress', () => _act('start'), icon: Icons.play_arrow_rounded));
       if (perm.canEditEta) out.add(secondary('Update ETA', editEta, icon: Icons.schedule_rounded));
@@ -275,7 +297,7 @@ class _StatusSheetState extends State<StatusSheet> {
     if (perm.canRequestInput) {
       out.add(secondary('Request information', () => setState(() => view = _View.requestInput), icon: Icons.help_outline_rounded));
     }
-    if (perm.canDone) out.add(primary('Mark done', () => _act('done'), color: TF.green, icon: Icons.check_rounded));
+    if (perm.canDone) out.add(primary('Mark done', () => _act('done'), icon: Icons.check_rounded));
     if (perm.canBlock && !t.isBlocked) out.add(secondary('Mark blocked', () => _openReason('block'), icon: Icons.block_rounded));
     if (t.isBlocked && perm.canUnblock) out.add(secondary('Unblock', () => _act('unblock'), icon: Icons.lock_open_rounded));
     if (perm.canReopen) out.add(secondary('Reopen', () => _openReason('reopen'), icon: Icons.replay_rounded));
@@ -286,18 +308,23 @@ class _StatusSheetState extends State<StatusSheet> {
 
   Widget _form({required String intro, required Widget field, required String submitLabel, required VoidCallback onSubmit}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(intro, style: const TextStyle(fontWeight: FontWeight.w600, color: TF.inkSoft)),
+      Text(intro, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Brand.navy)),
       const SizedBox(height: 12),
       field,
       const SizedBox(height: 16),
       Row(children: [
-        OutlinedButton(onPressed: busy ? null : () => setState(() => view = _View.actions), child: const Text('Back')),
+        FilledButton(
+          style: _navyButton,
+          onPressed: busy ? null : () => setState(() => view = _View.actions),
+          child: const Text('Back'),
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: FilledButton(
             key: const Key('status-submit'),
+            style: _limeButton,
             onPressed: busy ? null : onSubmit,
-            child: Text(busy ? 'Saving…' : submitLabel),
+            child: Text(busy ? 'Saving…' : submitLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         ),
       ]),
@@ -336,25 +363,105 @@ class _StatusSheetState extends State<StatusSheet> {
         },
       );
 
-  Widget _resumeCard(Task t) => Surface(
-        color: TF.greenSoft,
-        borderColor: TF.green.withValues(alpha: 0.3),
+  Widget _resumeCard(Task t) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Brand.limeLight, borderRadius: BorderRadius.circular(14), border: Border.all(color: Brand.limeDim)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('Data provided', style: TextStyle(fontWeight: FontWeight.w800, color: TF.green)),
+          const Row(children: [
+            Icon(Icons.check_circle_outline_rounded, size: 18, color: Brand.navy),
+            SizedBox(width: 8),
+            Flexible(child: Text('Data provided', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Brand.navy))),
+          ]),
           if (t.inputRequestNote != null) ...[
             const SizedBox(height: 6),
-            Text('Request: ${t.inputRequestNote}', style: const TextStyle(fontSize: 12.5, color: TF.inkSoft)),
+            Text('Request: ${t.inputRequestNote}', style: const TextStyle(fontSize: 12, color: Brand.onVariant)),
           ],
           if (t.inputPayload != null) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-              child: SelectableText(t.inputPayload!, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5)),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Brand.outline)),
+              child: SelectableText(t.inputPayload!, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
             ),
           ],
           const SizedBox(height: 12),
-          FilledButton(onPressed: busy ? null : () => _act('resume_after_input'), child: const Text('Continue working')),
+          FilledButton(style: _limeButton, onPressed: busy ? null : () => _act('resume_after_input'), child: const Text('Continue working')),
+        ]),
+      );
+}
+
+/// Lime primary / navy secondary buttons shared by the sheet and the cards below.
+final _limeButton = FilledButton.styleFrom(
+  backgroundColor: Brand.lime,
+  foregroundColor: Brand.navy,
+  disabledBackgroundColor: Brand.lime.withValues(alpha: 0.5),
+  disabledForegroundColor: Brand.navy.withValues(alpha: 0.5),
+  minimumSize: const Size(0, 44),
+  elevation: 0,
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+);
+
+final _navyButton = FilledButton.styleFrom(
+  backgroundColor: Brand.navy,
+  foregroundColor: Colors.white,
+  disabledBackgroundColor: Brand.navy.withValues(alpha: 0.4),
+  minimumSize: const Size(0, 44),
+  elevation: 0,
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+);
+
+final _redButton = FilledButton.styleFrom(
+  backgroundColor: brandRed,
+  foregroundColor: Colors.white,
+  disabledBackgroundColor: brandRed.withValues(alpha: 0.4),
+  minimumSize: const Size(0, 44),
+  elevation: 0,
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+);
+
+/// Tinted panel used by the escalation / input cards.
+class _Panel extends StatelessWidget {
+  const _Panel({
+    required this.bg,
+    required this.border,
+    required this.icon,
+    required this.iconBg,
+    required this.iconFg,
+    required this.title,
+    required this.titleColor,
+    required this.children,
+  });
+  final Color bg;
+  final Color border;
+  final IconData icon;
+  final Color iconBg;
+  final Color iconFg;
+  final String title;
+  final Color titleColor;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14), border: Border.all(color: border)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, size: 15, color: iconFg),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: titleColor)),
+            ),
+          ]),
+          ...children,
         ]),
       );
 }
@@ -376,19 +483,19 @@ class ExplainEscalationCard extends StatelessWidget {
   final VoidCallback onSubmit;
 
   @override
-  Widget build(BuildContext context) => Surface(
-        color: TF.coralSoft,
-        borderColor: TF.coral.withValues(alpha: 0.35),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Row(children: [
-            Icon(Icons.warning_amber_rounded, color: TF.coral, size: 20),
-            SizedBox(width: 8),
-            Text('Explanation required', style: TextStyle(fontWeight: FontWeight.w800, color: TF.coral, fontSize: 15)),
-          ]),
+  Widget build(BuildContext context) => _Panel(
+        bg: const Color(0xFFFEF2F2),
+        border: brandRed.withValues(alpha: 0.18),
+        icon: Icons.warning_amber_rounded,
+        iconBg: brandRed,
+        iconFg: Colors.white,
+        title: 'Explanation required',
+        titleColor: brandRedInk,
+        children: [
           const SizedBox(height: 6),
           const Text(
             'Submit a written explanation (min 20 characters) and propose a new ETA before doing anything else.',
-            style: TextStyle(fontSize: 13, color: TF.inkSoft),
+            style: TextStyle(fontSize: 12, height: 1.4, color: Brand.onVariant),
           ),
           const SizedBox(height: 10),
           TextField(
@@ -396,18 +503,20 @@ class ExplainEscalationCard extends StatelessWidget {
             controller: controller,
             minLines: 3,
             maxLines: 6,
-            decoration: const InputDecoration(hintText: 'Why was this task delayed?'),
+            style: const TextStyle(fontSize: 13),
+            decoration: const InputDecoration(hintText: 'Why was this task delayed?', filled: true, fillColor: Colors.white),
           ),
           const SizedBox(height: 10),
           DateTimeField(value: proposedEta, onChanged: onEta, label: 'Proposed new ETA'),
           const SizedBox(height: 12),
-          FilledButton(
+          FilledButton.icon(
             key: const Key('submit-explanation'),
-            style: FilledButton.styleFrom(backgroundColor: TF.coral),
+            style: _limeButton,
             onPressed: busy ? null : onSubmit,
-            child: Text(busy ? 'Submitting…' : 'Submit explanation'),
+            icon: const Icon(Icons.edit_note_rounded, size: 18),
+            label: Text(busy ? 'Submitting…' : 'Submit explanation', maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
-        ]),
+        ],
       );
 }
 
@@ -420,17 +529,25 @@ class ReviewEscalationCard extends StatelessWidget {
   final ValueChanged<String> onReview;
 
   @override
-  Widget build(BuildContext context) => Surface(
-        color: TF.amberSoft,
-        borderColor: TF.amber.withValues(alpha: 0.35),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('Escalation explanation', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF8A5A0B))),
-          const SizedBox(height: 6),
-          SelectableText(escalation.explanation ?? '', style: const TextStyle(color: TF.ink)),
+  Widget build(BuildContext context) => _Panel(
+        bg: const Color(0xFFFEF2F2),
+        border: brandRed.withValues(alpha: 0.18),
+        icon: Icons.gavel_rounded,
+        iconBg: brandRed,
+        iconFg: Colors.white,
+        title: 'Escalation explanation',
+        titleColor: brandRedInk,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Brand.outline)),
+            child: SelectableText(escalation.explanation ?? '', style: const TextStyle(fontSize: 13, height: 1.4, color: Brand.navy)),
+          ),
           const SizedBox(height: 6),
           Text(
             'Proposed ETA: ${fmtDateTime(escalation.proposedEtaAt)} · submitted ${timeAgo(escalation.explanationAt)}',
-            style: const TextStyle(fontSize: 12, color: TF.muted),
+            style: const TextStyle(fontSize: 11.5, color: Brand.onVariant),
           ),
           if (canReview) ...[
             const SizedBox(height: 12),
@@ -438,26 +555,27 @@ class ReviewEscalationCard extends StatelessWidget {
               Expanded(
                 child: FilledButton(
                   key: const Key('review-accept'),
+                  style: _limeButton,
                   onPressed: busy ? null : () => onReview('ACCEPTED'),
-                  child: const Text('Accept & re-plan'),
+                  child: const Text('Accept & re-plan', maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
                   key: const Key('review-reject'),
-                  style: FilledButton.styleFrom(backgroundColor: TF.coral),
+                  style: _redButton,
                   onPressed: busy ? null : () => onReview('REJECTED'),
-                  child: const Text('Reject'),
+                  child: const Text('Reject', maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ),
             ]),
           ],
           if (escalation.reviewStatus != null && escalation.reviewStatus != 'PENDING') ...[
             const SizedBox(height: 8),
-            Text(escalation.reviewStatus!, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+            Align(alignment: Alignment.centerLeft, child: LimeTag(escalation.reviewStatus!)),
           ],
-        ]),
+        ],
       );
 }
 
@@ -470,17 +588,21 @@ class ProvideInputCard extends StatelessWidget {
   final VoidCallback onSubmit;
 
   @override
-  Widget build(BuildContext context) => Surface(
-        color: const Color(0xFFE0F4F8),
-        borderColor: const Color(0xFF0E7490).withValues(alpha: 0.3),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('Information requested', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0E7490))),
+  Widget build(BuildContext context) => _Panel(
+        bg: Brand.limeLight,
+        border: Brand.limeDim,
+        icon: Icons.key_outlined,
+        iconBg: Brand.navy,
+        iconFg: Brand.lime,
+        title: 'Information requested',
+        titleColor: Brand.navy,
+        children: [
           if (task.inputRequestNote != null) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-              child: SelectableText(task.inputRequestNote!),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Brand.outline)),
+              child: SelectableText(task.inputRequestNote!, style: const TextStyle(fontSize: 13, height: 1.4, color: Brand.navy)),
             ),
           ],
           const SizedBox(height: 10),
@@ -489,15 +611,16 @@ class ProvideInputCard extends StatelessWidget {
             controller: controller,
             minLines: 4,
             maxLines: 8,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-            decoration: const InputDecoration(hintText: 'SMTP_HOST=smtp.gmail.com\nSMTP_PORT=587'),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            decoration: const InputDecoration(hintText: 'SMTP_HOST=smtp.gmail.com\nSMTP_PORT=587', filled: true, fillColor: Colors.white),
           ),
           const SizedBox(height: 10),
           FilledButton(
             key: const Key('submit-input'),
+            style: _navyButton,
             onPressed: busy ? null : onSubmit,
             child: Text(busy ? 'Saving…' : 'Submit information'),
           ),
-        ]),
+        ],
       );
 }

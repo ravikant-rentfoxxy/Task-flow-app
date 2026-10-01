@@ -9,6 +9,7 @@ import '../../state/chat_unread_controller.dart';
 import '../../state/realtime_controller.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 import '../admin/admin_screen.dart';
 import '../chat/chat_screen.dart';
@@ -134,7 +135,32 @@ class _HomeShellState extends State<HomeShell> {
       Widget icon(_Dest d, bool selected) {
         final i = Icon(selected ? d.selectedIcon : d.icon);
         if (d.id != 'chat' || chatUnread == 0) return i;
-        return Badge(backgroundColor: TF.coral, label: Text(chatUnread > 9 ? '9+' : '$chatUnread'), child: i);
+        return Badge(
+          backgroundColor: wide ? TF.coral : Brand.navy,
+          textColor: wide ? null : Brand.lime,
+          label: Text(chatUnread > 9 ? '9+' : '$chatUnread'),
+          child: i,
+        );
+      }
+
+      // Phone bar: active icon gets a small lime dot underneath.
+      Widget navIcon(_Dest d, bool selected) {
+        if (!selected) return icon(d, false);
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            icon(d, true),
+            Positioned(
+              bottom: -6,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(color: Brand.lime, shape: BoxShape.circle),
+              ),
+            ),
+          ],
+        );
       }
 
       if (wide) {
@@ -178,23 +204,25 @@ class _HomeShellState extends State<HomeShell> {
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
             color: Colors.white,
-            border: const Border(top: BorderSide(color: Brand.line)),
-            boxShadow: [BoxShadow(color: Brand.ink.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, -4))],
+            border: Border(top: BorderSide(color: Brand.outline.withValues(alpha: 0.6))),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, -4))],
           ),
           child: NavigationBarTheme(
             data: NavigationBarThemeData(
               backgroundColor: Colors.white,
-              indicatorColor: Brand.primarySoft,
+              surfaceTintColor: Colors.transparent,
+              indicatorColor: Colors.transparent,
+              overlayColor: WidgetStatePropertyAll(Brand.lime.withValues(alpha: 0.15)),
               height: 70,
               labelTextStyle: WidgetStateProperty.resolveWith(
                 (s) => TextStyle(
                   fontSize: 12,
                   fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-                  color: s.contains(WidgetState.selected) ? Brand.primary : Brand.inkSoft,
+                  color: s.contains(WidgetState.selected) ? Brand.navy : Brand.onVariant,
                 ),
               ),
               iconTheme: WidgetStateProperty.resolveWith(
-                (s) => IconThemeData(color: s.contains(WidgetState.selected) ? Brand.primary : Brand.inkSoft, size: 25),
+                (s) => IconThemeData(color: s.contains(WidgetState.selected) ? Brand.navy : Brand.onVariant, size: 25),
               ),
             ),
             child: NavigationBar(
@@ -202,7 +230,7 @@ class _HomeShellState extends State<HomeShell> {
               onDestinationSelected: (i) => shell.go(dests[i].id),
               destinations: [
                 for (final d in dests)
-                  NavigationDestination(key: ValueKey('nav-${d.id}'), icon: icon(d, false), selectedIcon: icon(d, true), label: d.label),
+                  NavigationDestination(key: ValueKey('nav-${d.id}'), icon: navIcon(d, false), selectedIcon: navIcon(d, true), label: d.label),
               ],
             ),
           ),
@@ -218,13 +246,7 @@ class _Brand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logo = Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: TF.ink, borderRadius: BorderRadius.circular(11)),
-      child: const Text('TF', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
-    );
+    const logo = AppLogo(size: 40);
     if (!extended) return logo;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -234,7 +256,7 @@ class _Brand extends StatelessWidget {
         const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('TaskFlow', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: -0.3)),
+            Text('Work Plus', style: TextStyle(fontFamily: kBrandFont, fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: -0.2)),
             Text('Task management', style: TextStyle(fontSize: 11.5, color: TF.muted)),
           ],
         ),
@@ -252,28 +274,47 @@ class MoreScreen extends StatelessWidget {
     final me = Get.find<AuthController>().me;
     void push(Widget w) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => w));
     return Scaffold(
+      backgroundColor: Brand.surface,
       appBar: const TopBar(title: 'More'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         children: [
-          if (me != null)
-            Surface(
+          if (me != null) ...[
+            HeroCard(
               child: Row(
                 children: [
-                  Avatar(me.name, size: 48, dark: true),
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(color: Brand.lime, shape: BoxShape.circle),
+                    child: Avatar(me.name, size: 50),
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(displayName(me.name), style: Theme.of(context).textTheme.titleMedium),
-                        Text(me.email, style: Theme.of(context).textTheme.bodySmall),
-                        const SizedBox(height: 6),
+                        const HeroEyebrow('Signed in as'),
+                        const SizedBox(height: 4),
+                        Text(
+                          displayName(me.name),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: Colors.white),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          me.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65)),
+                        ),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 6,
+                          runSpacing: 6,
                           children: [
-                            Pill(me.roleLabel, fg: TF.primaryDeep, bg: TF.primarySoft),
-                            if (me.team != null) Pill(me.team!),
+                            LimeTag(me.roleLabel),
+                            if (me.team != null) LimeTag(me.team!),
                           ],
                         ),
                       ],
@@ -282,7 +323,9 @@ class MoreScreen extends StatelessWidget {
                 ],
               ),
             ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 20),
+          ],
+          const BrandSectionTitle(title: 'Workspace'),
           _MoreTile(
             key: const Key('more-reports'),
             icon: Icons.insights_rounded,
@@ -308,15 +351,22 @@ class MoreScreen extends StatelessWidget {
               subtitle: me.isAdmin ? 'Users, teams and task types' : 'Task types for your team',
               onTap: () => push(const AdminScreen()),
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           OutlinedButton.icon(
             key: const Key('more-logout'),
-            style: OutlinedButton.styleFrom(foregroundColor: TF.coral, minimumSize: const Size(double.infinity, 48)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: brandRed,
+              backgroundColor: Colors.white,
+              side: BorderSide(color: brandRed.withValues(alpha: 0.35)),
+              minimumSize: const Size(double.infinity, 46),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+            ),
             onPressed: () async {
               Get.find<ChatUnreadController>().clear();
               await Get.find<AuthController>().logout();
             },
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, size: 19),
             label: const Text('Log out'),
           ),
         ],
@@ -335,42 +385,47 @@ class _MoreTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Material(
-      color: TF.surface,
-      borderRadius: BorderRadius.circular(TF.radius),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(TF.radius),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(TF.radius),
-            border: Border.all(color: TF.line),
-            boxShadow: Brand.shadow,
+    padding: const EdgeInsets.only(bottom: 8),
+    child: BrandCard(
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 19, color: color),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleSmall),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                  ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Brand.navy),
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: TF.faint),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Brand.onVariant),
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 6),
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(color: Brand.surfaceLow, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.chevron_right_rounded, size: 18, color: Brand.navy),
+          ),
+        ],
       ),
     ),
   );

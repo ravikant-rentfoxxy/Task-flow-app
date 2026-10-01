@@ -125,7 +125,7 @@ class MenuChip extends StatelessWidget {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (icon != null) ...[Icon(icon, size: 16, color: active ? TF.primaryDeep : TF.muted), const SizedBox(width: 6)],
-          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: active ? TF.primaryDeep : TF.inkSoft)),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: active ? TF.primaryDeep : TF.inkSoft)),
           const SizedBox(width: 2),
           Icon(Icons.expand_more_rounded, size: 18, color: active ? TF.primaryDeep : TF.muted),
         ]),

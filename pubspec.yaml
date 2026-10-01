@@ -69,6 +69,19 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - assets/logo/work_plus_logo.png
+
+  # Montserrat (OFL, assets/fonts/OFL.txt) matches the "Work+" logo lettering;
+  # used only for the Work Plus wordmark.
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
@@ -100,7 +113,7 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# App icon (TaskFlow "TF" logo, same as TMS_FE public/icon.svg). Regenerate with:
+# App icon (Work Plus "Work+" logo). Regenerate with:
 #   dart run flutter_launcher_icons
 flutter_launcher_icons:
   image_path: assets/icon/app_icon.png
@@ -108,5 +121,5 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   android: true
   min_sdk_android: 21
-  adaptive_icon_background: "#111827"
+  adaptive_icon_background: "#000000"
   adaptive_icon_foreground: assets/icon/app_icon_foreground.png

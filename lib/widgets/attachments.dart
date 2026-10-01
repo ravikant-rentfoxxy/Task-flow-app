@@ -70,12 +70,12 @@ class AttachmentTile extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(a.fileName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+              Text(a.fileName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
               Text(
                 [formatBytes(a.size), if (a.uploaderName != null) a.uploaderName!, if (a.createdAt != null) timeAgo(a.createdAt)]
                     .where((s) => s.isNotEmpty)
                     .join(' · '),
-                style: const TextStyle(fontSize: 11.5, color: TF.muted),
+                style: const TextStyle(fontSize: 11, color: TF.muted),
               ),
             ]),
           ),
@@ -97,7 +97,7 @@ class _ImageViewer extends StatelessWidget {
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           shape: const Border(),
-          title: Text(attachment.fileName, style: const TextStyle(color: Colors.white, fontSize: 15)),
+          title: Text(attachment.fileName, style: const TextStyle(color: Colors.white, fontSize: 14)),
         ),
         body: InteractiveViewer(
           maxScale: 5,

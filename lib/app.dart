@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -6,6 +8,7 @@ import 'core/local_store.dart';
 import 'data/taskflow_api.dart';
 import 'features/auth/login_screen.dart';
 import 'features/shell/home_shell.dart';
+import 'features/splash/splash_screen.dart';
 import 'state/auth_controller.dart';
 import 'state/chat_unread_controller.dart';
 import 'state/realtime_controller.dart';
@@ -44,7 +47,7 @@ class _TaskFlowAppState extends State<TaskFlowApp> {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'TaskFlow',
+      title: 'Work Plus',
       debugShowCheckedModeBanner: false,
       theme: TF.theme(),
       themeMode: ThemeMode.light,
@@ -54,19 +57,48 @@ class _TaskFlowAppState extends State<TaskFlowApp> {
   }
 }
 
-class _AuthGate extends StatelessWidget {
+/// Splash until the session is restored and the intro has played, then login or home.
+class _AuthGate extends StatefulWidget {
   const _AuthGate();
+
+  /// Long enough for the splash intro animation to finish.
+  static const minSplash = Duration(milliseconds: 1600);
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  bool _introDone = false;
+  late final Timer _timer = Timer(_AuthGate.minSplash, () {
+    if (mounted) setState(() => _introDone = true);
+  });
+
+  @override
+  void initState() {
+    super.initState();
+    _timer; // start the minimum splash time
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = Get.find<AuthController>();
-    return Obx(() => AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          child: switch (auth.status) {
-            AuthStatus.unknown => const Scaffold(key: ValueKey('splash'), body: Center(child: CircularProgressIndicator())),
-            AuthStatus.signedOut => const LoginScreen(key: ValueKey('login')),
-            AuthStatus.signedIn => const HomeShell(key: ValueKey('home')),
-          },
-        ));
+    return Obx(() {
+      final status = auth.status; // read first so Obx always subscribes
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        child: !_introDone || status == AuthStatus.unknown
+            ? const SplashScreen(key: ValueKey('splash'))
+            : status == AuthStatus.signedIn
+                ? const HomeShell(key: ValueKey('home'))
+                : const LoginScreen(key: ValueKey('login')),
+      );
+    });
   }
 }

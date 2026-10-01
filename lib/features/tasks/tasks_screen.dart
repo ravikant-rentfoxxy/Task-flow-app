@@ -10,6 +10,7 @@ import '../../models/models.dart';
 import '../../state/realtime_controller.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 import '../../widgets/filters.dart';
 import '../shell/top_bar.dart';
@@ -125,79 +126,86 @@ class _TasksScreenState extends State<TasksScreen> {
       if (me?.isManager ?? false) ('team', 'Team'),
       if (me?.isAdminOrCeo ?? false) ('all', 'All'),
     ];
-    final statusLabel = status.isEmpty ? 'Open tasks' : (status == 'all' ? 'All statuses' : statusLabels[status] ?? status);
+    final statusName = status.isEmpty ? 'Open' : (status == 'all' ? 'All' : statusLabels[status] ?? status);
+    final total = result != null && !loading ? ' (${result!.pagination.total})' : '';
 
     final isAdmin = me?.isAdminOrCeo ?? false;
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Brand.outline));
 
     return Scaffold(
-      backgroundColor: Brand.bg,
+      backgroundColor: Brand.surface,
       appBar: const BrandTopBar(subtitle: 'Tasks'),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('new-task-fab'),
-        heroTag: 'new-task-fab',
-        onPressed: () async {
-          final ids = await showComposer(context);
-          if (ids != null) _load();
-        },
-        backgroundColor: Brand.primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: const StadiumBorder(),
-        icon: const Icon(Icons.add_rounded, size: 26),
-        label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+      floatingActionButton: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(99),
+          boxShadow: [BoxShadow(color: Brand.lime.withValues(alpha: 0.5), blurRadius: 14, offset: const Offset(0, 4))],
+        ),
+        child: FloatingActionButton.extended(
+          key: const Key('new-task-fab'),
+          heroTag: 'new-task-fab',
+          onPressed: () async {
+            final ids = await showComposer(context);
+            if (ids != null) _load();
+          },
+          backgroundColor: Brand.lime,
+          foregroundColor: Brand.navy,
+          elevation: 0,
+          highlightElevation: 0,
+          shape: const StadiumBorder(side: BorderSide(color: Brand.navy, width: 2)),
+          icon: const Icon(Icons.add_rounded, size: 26),
+          label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+        ),
       ),
       body: RefreshIndicator(
-        color: Brand.primary,
+        color: Brand.navy,
+        backgroundColor: Brand.lime,
         onRefresh: _load,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 104),
           children: [
             PageBody(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _Segments(
-                  segments: segments,
-                  selected: assigneeFilter.isEmpty ? filter : null,
-                  onSelected: (id) => _update(() {
-                    filter = id;
-                    assigneeFilter = '';
-                  }),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  key: const Key('task-search'),
-                  controller: searchCtrl,
-                  style: const TextStyle(fontSize: 15.5, color: Brand.ink),
-                  decoration: InputDecoration(
-                    hintText: 'Search tasks…',
-                    hintStyle: const TextStyle(fontSize: 15.5, color: Brand.faint),
-                    filled: true,
-                    fillColor: Brand.card,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: Icon(Icons.search_rounded, size: 24, color: Brand.inkSoft),
-                    ),
-                    suffixIcon: q.isEmpty
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.close_rounded, size: 20, color: Brand.muted),
-                            onPressed: () {
-                              searchCtrl.clear();
-                              _update(() => q = '');
-                            },
-                          ),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Brand.line)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Brand.line)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: Brand.primary.withValues(alpha: 0.7), width: 1.5),
+                _hero(segments, statusName),
+                const SizedBox(height: 14),
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      key: const Key('task-search'),
+                      controller: searchCtrl,
+                      style: const TextStyle(fontSize: 13, color: Brand.navy),
+                      decoration: InputDecoration(
+                        hintText: 'Search by title or description…',
+                        hintStyle: const TextStyle(fontSize: 13, color: Brand.onVariant),
+                        filled: true,
+                        fillColor: Colors.white,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Brand.onVariant),
+                        suffixIcon: q.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 20, color: Brand.onVariant),
+                                onPressed: () {
+                                  searchCtrl.clear();
+                                  _update(() => q = '');
+                                },
+                              ),
+                        border: border,
+                        enabledBorder: border,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Brand.navy, width: 1.5),
+                        ),
+                      ),
+                      onChanged: (v) {
+                        _debounce?.cancel();
+                        _debounce = Timer(const Duration(milliseconds: 350), () => _update(() => q = v.trim()));
+                      },
                     ),
                   ),
-                  onChanged: (v) {
-                    _debounce?.cancel();
-                    _debounce = Timer(const Duration(milliseconds: 350), () => _update(() => q = v.trim()));
-                  },
-                ),
+                  const SizedBox(width: 10),
+                  _FilterButton(active: _hasFilters, onTap: () => _openFilters(isAdmin)),
+                ]),
                 const SizedBox(height: 12),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -206,8 +214,8 @@ class _TasksScreenState extends State<TasksScreen> {
                     _FilterPill<String>(
                       key: const Key('status-filter'),
                       icon: Icons.check_circle_outline_rounded,
-                      label: 'Status: $statusLabel',
-                      active: status.isNotEmpty,
+                      label: 'Status: $statusName$total',
+                      active: true,
                       primary: true,
                       options: [('', 'Open tasks'), ('all', 'All statuses'), ...statusLabels.entries.map((e) => (e.key, e.value))],
                       onSelected: (v) => _update(() => status = v),
@@ -219,10 +227,7 @@ class _TasksScreenState extends State<TasksScreen> {
                         icon: Icons.person_search_outlined,
                         label: userOrTeamLabel(assigneeFilter, users, teams),
                         active: assigneeFilter.isNotEmpty,
-                        onTap: () async {
-                          final v = await pickUserOrTeam(context, users: users, teams: teams, selected: assigneeFilter);
-                          if (v != null) _update(() => assigneeFilter = v);
-                        },
+                        onTap: _pickAssignee,
                       ),
                     ],
                     const SizedBox(width: 8),
@@ -239,7 +244,7 @@ class _TasksScreenState extends State<TasksScreen> {
                       const SizedBox(width: 4),
                       TextButton.icon(
                         key: const Key('reset-filters'),
-                        style: TextButton.styleFrom(foregroundColor: Brand.primaryDeep),
+                        style: TextButton.styleFrom(foregroundColor: Brand.navy, textStyle: const TextStyle(fontWeight: FontWeight.w700)),
                         onPressed: _reset,
                         icon: const Icon(Icons.restart_alt_rounded, size: 18),
                         label: const Text('Reset filters'),
@@ -248,14 +253,22 @@ class _TasksScreenState extends State<TasksScreen> {
                   ]),
                 ),
                 const SizedBox(height: 16),
+                BrandSectionTitle(
+                  title: '$statusName tasks',
+                  count: result != null && !loading ? result!.pagination.total : null,
+                ),
                 if (loading && result == null)
                   const SkeletonList()
                 else if (error != null && result == null)
                   ErrorView(message: error!, onRetry: _load)
                 else if (result!.tasks.isEmpty)
                   Container(
-                    decoration: BoxDecoration(color: Brand.card, borderRadius: BorderRadius.circular(Brand.radius), boxShadow: Brand.shadow),
-                    child: const EmptyState(icon: Icons.inbox_outlined, color: Brand.primary, title: 'No tasks match', message: 'Try a different filter.'),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Brand.outline),
+                    ),
+                    child: const EmptyState(icon: Icons.inbox_outlined, color: Brand.navy, title: 'No tasks match', message: 'Try a different filter.'),
                   )
                 else ...[
                   AnimatedOpacity(
@@ -264,7 +277,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     child: TaskList(tasks: result!.tasks, onChanged: () => _load(quiet: true), roomy: true),
                   ),
                   const SizedBox(height: 8),
-                  _pagination(result!.pagination),
+                  _pagination(result!.pagination, result!.tasks.length),
                 ],
               ]),
             ),
@@ -272,6 +285,136 @@ class _TasksScreenState extends State<TasksScreen> {
         ),
       ),
     );
+  }
+
+  /// Navy hero: scope + live pill, the result count for the status filter and
+  /// the My tasks / Created by me / Team / All segments.
+  Widget _hero(List<(String, String)> segments, String statusName) {
+    final scope = assigneeFilter.isNotEmpty
+        ? userOrTeamLabel(assigneeFilter, users, teams)
+        : segments.firstWhere((s) => s.$1 == filter, orElse: () => segments.first).$2;
+    final total = result?.pagination.total;
+    final noun = statusName == 'All' ? 'tasks' : '${statusName.toLowerCase()} tasks';
+    return HeroCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: HeroEyebrow('Tasks · $scope')),
+          Obx(() => Get.find<RealtimeController>().connected.value ? const LivePill() : const SizedBox.shrink()),
+        ]),
+        const SizedBox(height: 10),
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Container(
+            constraints: const BoxConstraints(minWidth: 40),
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: Brand.lime, borderRadius: BorderRadius.circular(12)),
+            child: loading && result == null
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Brand.navy))
+                : Text('${total ?? 0}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, height: 1, color: Brand.navy)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: HeroTitle(total == 1 ? noun.replaceFirst('tasks', 'task') : noun, maxLines: 1)),
+        ]),
+        if (due.isActive || q.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            [if (q.isNotEmpty) 'Matching "$q"', if (due.isActive) 'Due ${_dueLabel().toLowerCase()}'].join('  •  '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.7)),
+          ),
+        ],
+        const SizedBox(height: 14),
+        HeroSegments(items: [
+          for (final s in segments)
+            (
+              ValueKey('segment-${s.$1}'),
+              s.$2,
+              assigneeFilter.isEmpty && filter == s.$1,
+              () => _update(() {
+                    filter = s.$1;
+                    assigneeFilter = '';
+                  }),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  Future<void> _pickAssignee() async {
+    final v = await pickUserOrTeam(context, users: users, teams: teams, selected: assigneeFilter);
+    if (v != null) _update(() => assigneeFilter = v);
+  }
+
+  /// All filters in one sheet (opened from the navy filter button).
+  Future<void> _openFilters(bool isAdmin) async {
+    final picked = await showAppSheet<VoidCallback>(
+      context,
+      builder: (ctx) {
+        Widget chip(String label, bool selected, VoidCallback apply) => _SheetChip(
+              label: label,
+              selected: selected,
+              onTap: () => Navigator.of(ctx).pop(apply),
+            );
+        Widget heading(String text) => Padding(
+              padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
+              child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Brand.onVariant, letterSpacing: 0.3)),
+            );
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+            const SheetTitle('Filters'),
+            heading('STATUS'),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final o in [('', 'Open tasks'), ('all', 'All statuses'), ...statusLabels.entries.map((e) => (e.key, e.value))])
+                chip(o.$2, status == o.$1, () => _update(() => status = o.$1)),
+            ]),
+            heading('DUE DATE'),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              chip('Any due date', due.mode == 'all', () => _setDue('all')),
+              chip('Due today', due.mode == 'today', () => _setDue('today')),
+              chip(due.mode == 'range' ? _dueLabel() : 'Date range', due.mode == 'range', () => _setDue('range')),
+            ]),
+            if (isAdmin) ...[
+              heading('ASSIGNEE'),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                chip(userOrTeamLabel(assigneeFilter, users, teams), assigneeFilter.isNotEmpty, _pickAssignee),
+              ]),
+            ],
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Brand.navy,
+                    side: const BorderSide(color: Brand.outline),
+                    minimumSize: const Size.fromHeight(46),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _hasFilters ? () => Navigator.of(ctx).pop(_reset) : null,
+                  child: const Text('Reset', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Brand.navy,
+                    foregroundColor: Brand.lime,
+                    minimumSize: const Size.fromHeight(46),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ]),
+          ]),
+        );
+      },
+    );
+    picked?.call();
   }
 
   String _dueLabel() => switch (due.mode) {
@@ -293,35 +436,39 @@ class _TasksScreenState extends State<TasksScreen> {
     if (r != null) _update(() => due = DueFilter(mode: 'range', from: r.start, to: r.end));
   }
 
-  Widget _pagination(Pagination p) {
-    final label = p.totalPages <= 1
-        ? '${p.total} task${p.total == 1 ? '' : 's'}'
-        : 'Page ${p.page} of ${p.totalPages} · ${p.total} tasks';
+  /// Navy "Showing X of Y tasks" pill with a lime dot and page arrows.
+  Widget _pagination(Pagination p, int shown) {
+    final multi = p.totalPages > 1;
+    final start = (p.page - 1) * p.limit + 1;
+    final label = multi
+        ? 'Showing $start–${start + shown - 1} of ${p.total} tasks'
+        : 'Showing $shown of ${p.total} task${p.total == 1 ? '' : 's'}';
     Widget arrow(Key key, IconData icon, VoidCallback? onTap) => IconButton(
           key: key,
           visualDensity: VisualDensity.compact,
           onPressed: onTap,
-          icon: Icon(icon, color: onTap == null ? Colors.white.withValues(alpha: 0.3) : Colors.white),
+          icon: Icon(icon, color: onTap == null ? Colors.white.withValues(alpha: 0.3) : Brand.lime),
         );
     return Center(
       child: Container(
         margin: const EdgeInsets.only(top: 8),
-        padding: EdgeInsets.fromLTRB(18, p.totalPages <= 1 ? 12 : 4, p.totalPages <= 1 ? 18 : 4, p.totalPages <= 1 ? 12 : 4),
+        padding: EdgeInsets.fromLTRB(18, multi ? 4 : 12, multi ? 4 : 18, multi ? 4 : 12),
         decoration: BoxDecoration(
-          color: Brand.ink,
+          color: Brand.navy,
           borderRadius: BorderRadius.circular(99),
-          boxShadow: [BoxShadow(color: Brand.ink.withValues(alpha: 0.18), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: Brand.navy.withValues(alpha: 0.18), blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 9, height: 9, decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle)),
+          Container(width: 9, height: 9, decoration: const BoxDecoration(color: Brand.lime, shape: BoxShape.circle)),
           const SizedBox(width: 10),
           Flexible(
             child: Text(label,
-                key: p.totalPages <= 1 ? null : const Key('pagination-label'),
+                key: multi ? const Key('pagination-label') : null,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
           ),
-          if (p.totalPages > 1) ...[
+          if (multi) ...[
             const SizedBox(width: 6),
             arrow(
                 const Key('page-prev'),
@@ -348,54 +495,72 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 }
 
-/// My tasks · Created by me · Team · All as one segmented control.
-class _Segments extends StatelessWidget {
-  const _Segments({required this.segments, required this.selected, required this.onSelected});
-  final List<(String, String)> segments;
-  final String? selected;
-  final ValueChanged<String> onSelected;
+/// Navy square filter button with a lime icon; a lime dot marks active filters.
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({required this.active, required this.onTap});
+  final bool active;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(color: Brand.primarySoft.withValues(alpha: 0.8), borderRadius: BorderRadius.circular(16)),
-        child: Row(children: [
-          for (final s in segments)
-            Expanded(
-              child: GestureDetector(
-                key: ValueKey('segment-${s.$1}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onSelected(s.$1),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  constraints: const BoxConstraints(minHeight: 46),
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: selected == s.$1 ? Brand.card : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: selected == s.$1
-                        ? [BoxShadow(color: Brand.ink.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))]
-                        : null,
+  Widget build(BuildContext context) => Tooltip(
+        message: 'Filters',
+        child: Material(
+          key: const Key('filters-button'),
+          color: Brand.navy,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: SizedBox(
+              width: 46,
+              height: 46,
+              child: Stack(alignment: Alignment.center, children: [
+                const Icon(Icons.tune_rounded, size: 22, color: Brand.lime),
+                if (active)
+                  Positioned(
+                    top: 9,
+                    right: 9,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(color: Brand.lime, shape: BoxShape.circle, border: Border.all(color: Brand.navy, width: 1.5)),
+                    ),
                   ),
-                  child: Text(s.$2,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        height: 1.2,
-                        fontWeight: selected == s.$1 ? FontWeight.w700 : FontWeight.w500,
-                        color: selected == s.$1 ? Brand.ink : Brand.inkSoft,
-                      )),
-                ),
-              ),
+              ]),
             ),
-        ]),
+          ),
+        ),
       );
 }
 
-/// Rounded filter pill: opens a menu of [options], or runs [onTap].
+/// Selectable chip inside the filter sheet.
+class _SheetChip extends StatelessWidget {
+  const _SheetChip({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: selected ? Brand.navy : Colors.white,
+        shape: StadiumBorder(side: BorderSide(color: selected ? Brand.navy : Brand.outline)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: selected ? Brand.lime : Brand.navy)),
+          ),
+        ),
+      );
+}
+
+/// Rounded filter pill: opens a menu of [options], or runs [onTap]. The
+/// [primary] pill is navy with lime text; others are white and outlined, or
+/// lime-tinted when [active].
 class _FilterPill<T> extends StatelessWidget {
   const _FilterPill({
     super.key,
@@ -413,7 +578,7 @@ class _FilterPill<T> extends StatelessWidget {
   final String label;
   final bool active;
 
-  /// Filled indigo when active (the main filter).
+  /// Navy with lime text when active (the main filter).
   final bool primary;
   final List<(T, String)> options;
   final Key Function(T)? optionKey;
@@ -423,20 +588,19 @@ class _FilterPill<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filled = primary && active;
-    final fg = filled ? Colors.white : (active ? Brand.primaryDeep : Brand.inkSoft);
+    final fg = filled ? Brand.lime : Brand.navy;
     final pill = Container(
-      padding: const EdgeInsets.fromLTRB(14, 9, 10, 9),
+      padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
       decoration: BoxDecoration(
-        color: filled ? Brand.primary : (active ? Brand.primarySoft : Brand.card),
+        color: filled ? Brand.navy : (active ? Brand.limeLight : Colors.white),
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: filled ? Brand.primary : (active ? Brand.primary.withValues(alpha: 0.3) : Brand.line)),
+        border: Border.all(color: filled ? Brand.navy : (active ? Brand.limeDim : Brand.outline)),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 18, color: fg),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
+        if (filled || active) ...[Icon(icon, size: 15, color: fg), const SizedBox(width: 5)],
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: filled ? FontWeight.w700 : FontWeight.w500, color: fg)),
         const SizedBox(width: 2),
-        Icon(Icons.expand_more_rounded, size: 20, color: fg),
+        Icon(Icons.expand_more_rounded, size: 18, color: fg),
       ]),
     );
     if (onTap != null) {

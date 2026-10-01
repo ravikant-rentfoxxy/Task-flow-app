@@ -140,19 +140,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     key: const ValueKey('email-step'),
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       const Center(child: _ResetBadge()),
-      const SizedBox(height: 24),
+      const SizedBox(height: 22),
       const Text(
         'Reset password',
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: AuthUi.ink),
+        style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: AuthUi.ink),
       ),
       const SizedBox(height: 10),
-      Text(
+      const Text(
         'Enter your RentFoxxy work email and we will send you a 6-digit verification code.',
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 15.5, height: 1.45, color: AuthUi.ink.withValues(alpha: 0.7)),
+        style: TextStyle(fontSize: 15.5, height: 1.5, color: AuthUi.muted),
       ),
       const SizedBox(height: 24),
       const _RecoveryIllustration(),
@@ -162,10 +162,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           Expanded(
             child: Text(
               'Work Email',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AuthUi.ink),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AuthUi.ink),
             ),
           ),
-          Text('Domain required', style: TextStyle(fontSize: 13.5, color: AuthUi.link)),
+          Text(
+            'Domain required',
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AuthUi.olive),
+          ),
         ],
       ),
       const SizedBox(height: 10),
@@ -176,7 +179,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         autofillHints: const [AutofillHints.email],
         onSubmitted: (_) => busy ? null : _request(),
         style: AuthUi.inputText,
-        decoration: AuthUi.input(hint: 'e.g. name@rentfoxxy.com', icon: Icons.mail_outline_rounded, fill: Colors.white),
+        decoration: AuthUi.input(hint: 'you@rentfoxxy.com', icon: Icons.mail_outline_rounded, outlined: true),
       ),
       const SizedBox(height: 18),
       const _InfoTile(
@@ -191,16 +194,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         busy: busy,
         onPressed: busy ? null : _request,
       ),
-      const SizedBox(height: 28),
+      const SizedBox(height: 24),
       Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('Remember your password?', style: TextStyle(fontSize: 15, color: AuthUi.ink.withValues(alpha: 0.7))),
+          const Text('Remember your password?', style: TextStyle(fontSize: 15, color: AuthUi.muted)),
           TextButton(
             style: TextButton.styleFrom(
-              foregroundColor: AuthUi.link,
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              foregroundColor: AuthUi.ink,
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                decoration: TextDecoration.underline,
+                decorationThickness: 2,
+              ),
             ),
             onPressed: () => Navigator.maybePop(context),
             child: const Text('Sign in'),
@@ -208,19 +216,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ],
       ),
       const SizedBox(height: 12),
-      Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          decoration: BoxDecoration(color: const Color(0xFFE9EAFB), borderRadius: BorderRadius.circular(99)),
-          child: const Row(
+      const Center(
+        child: AuthPill(
+          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.lock_outline_rounded, size: 20, color: AuthUi.success),
+              Icon(Icons.lock_outline_rounded, size: 19, color: AuthUi.ink),
               SizedBox(width: 10),
               Flexible(
                 child: Text(
                   'Encrypted Code Request',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: 0.3, color: AuthUi.label),
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: 0.3, color: AuthUi.ink),
                 ),
               ),
             ],
@@ -245,26 +252,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       children: [
         Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(color: const Color(0xFFE6E8FA), borderRadius: BorderRadius.circular(99)),
-              child: const Text(
+            const AuthPill(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              child: Text(
                 'STEP 2 OF 2',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: AuthUi.label),
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: AuthUi.olive),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Container(
-              width: 7,
-              height: 7,
-              decoration: const BoxDecoration(color: AuthUi.link, shape: BoxShape.circle),
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(color: Color(0xFF8DB50F), shape: BoxShape.circle),
             ),
             const SizedBox(width: 6),
             const Flexible(
               child: Text(
                 'Security check',
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AuthUi.link),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AuthUi.olive),
               ),
             ),
           ],
@@ -272,10 +278,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         const SizedBox(height: 16),
         const Text(
           'Enter 6-digit code',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.6, color: AuthUi.ink),
+          style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: -0.8, color: AuthUi.ink),
         ),
         const SizedBox(height: 8),
-        Text('We sent a verification code to', style: TextStyle(fontSize: 15.5, color: AuthUi.ink.withValues(alpha: 0.7))),
+        const Text('We sent a verification code to', style: TextStyle(fontSize: 15.5, color: AuthUi.muted)),
         const SizedBox(height: 2),
         Text(
           email.text.trim(),
@@ -290,17 +296,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const Expanded(
                   child: Text(
                     'VERIFICATION CODE',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, letterSpacing: 0.6, color: AuthUi.ink),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.9, color: AuthUi.muted),
                   ),
                 ),
                 TextButton.icon(
                   key: const Key('reset-change-email'),
                   style: TextButton.styleFrom(
-                    foregroundColor: AuthUi.link,
+                    foregroundColor: AuthUi.olive,
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(0, 32),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   onPressed: busy ? null : _back,
                   icon: const Icon(Icons.edit_outlined, size: 16),
@@ -318,7 +324,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 style: const TextStyle(fontSize: 13, color: AuthUi.muted),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             Center(
               child: _ResendPill(seconds: resendIn, onResend: busy ? null : () => _request(resend: true)),
             ),
@@ -326,7 +332,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             const Text(
               'You can resend the code after 30 seconds',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, letterSpacing: 0.3, color: AuthUi.muted),
+              style: TextStyle(fontSize: 13, letterSpacing: 0.2, color: AuthUi.muted),
             ),
           ],
         ),
@@ -338,24 +344,28 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
-                  margin: const EdgeInsets.only(top: 12, right: 14),
-                  decoration: BoxDecoration(color: AuthUi.field, borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.lock_reset_rounded, color: AuthUi.link, size: 22),
+                  width: 46,
+                  height: 46,
+                  margin: const EdgeInsets.only(top: 4, right: 14),
+                  decoration: BoxDecoration(
+                    color: AuthUi.limeSoft,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AuthUi.limeLine),
+                  ),
+                  child: const Icon(Icons.lock_reset_rounded, color: AuthUi.ink, size: 24),
                 ),
-                Expanded(
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Create new password',
                         style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: AuthUi.ink),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         'Must be different from previously used passwords',
-                        style: TextStyle(fontSize: 14.5, height: 1.4, color: AuthUi.ink.withValues(alpha: 0.7)),
+                        style: TextStyle(fontSize: 14.5, height: 1.4, color: AuthUi.muted),
                       ),
                     ],
                   ),
@@ -372,6 +382,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               style: AuthUi.inputText,
               decoration: AuthUi.input(
                 hint: 'New password (min 6)',
+                outlined: true,
                 suffix: _EyeButton(obscure: obscureNew, onTap: () => setState(() => obscureNew = !obscureNew)),
               ),
             ),
@@ -387,19 +398,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               style: AuthUi.inputText,
               decoration: AuthUi.input(
                 hint: 'Confirm new password',
+                outlined: true,
                 suffix: _EyeButton(obscure: obscureConfirm, onTap: () => setState(() => obscureConfirm = !obscureConfirm)),
               ),
             ),
             const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-              decoration: BoxDecoration(color: AuthUi.field, borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                color: AuthUi.field,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AuthUi.limeLine),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'SECURITY CRITERIA',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.5, color: AuthUi.label),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 0.9, color: AuthUi.muted),
                   ),
                   const SizedBox(height: 10),
                   for (final (label, ok) in criteria)
@@ -408,13 +424,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            ok ? Icons.check_circle_outline_rounded : Icons.radio_button_unchecked_rounded,
+                            ok ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                             size: 20,
-                            color: ok ? AuthUi.success : const Color(0xFF9CA3AF),
+                            color: ok ? AuthUi.ink : AuthUi.faint,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(label, style: TextStyle(fontSize: 15.5, color: ok ? AuthUi.ink : AuthUi.muted)),
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: ok ? FontWeight.w500 : FontWeight.w400,
+                                color: ok ? AuthUi.ink : AuthUi.muted,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -439,43 +462,49 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
 // ── Pieces ────────────────────────────────────────────────────────────────
 
+/// Navy disc with a lime reset icon, lime glow ring and a shield badge.
 class _ResetBadge extends StatelessWidget {
   const _ResetBadge();
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 150,
-    height: 150,
+    width: 168,
+    height: 168,
     child: Stack(
       alignment: Alignment.center,
       children: [
         Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(color: AuthUi.primary.withValues(alpha: 0.06), shape: BoxShape.circle),
+          width: 160,
+          height: 160,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AuthUi.lime.withValues(alpha: 0.22),
+            border: Border.all(color: AuthUi.lime.withValues(alpha: 0.7), width: 2),
+            boxShadow: [BoxShadow(color: AuthUi.lime.withValues(alpha: 0.45), blurRadius: 30)],
+          ),
         ),
         Container(
-          width: 120,
-          height: 120,
+          width: 112,
+          height: 112,
           decoration: BoxDecoration(
-            color: const Color(0xFF3A2FD0),
+            color: AuthUi.ink,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: AuthUi.primary.withValues(alpha: 0.3), blurRadius: 24, offset: const Offset(0, 10))],
+            boxShadow: [BoxShadow(color: AuthUi.ink.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 8))],
           ),
-          child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 60),
+          child: const Icon(Icons.lock_reset_rounded, color: AuthUi.lime, size: 54),
         ),
         Positioned(
-          right: 12,
-          bottom: 12,
+          right: 16,
+          bottom: 16,
           child: Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AuthUi.success,
+              color: AuthUi.lime,
               shape: BoxShape.circle,
-              border: Border.all(color: AuthUi.bg, width: 3),
+              border: Border.all(color: Colors.white, width: 3),
             ),
-            child: const Icon(Icons.verified_user_outlined, color: Colors.white, size: 22),
+            child: const Icon(Icons.verified_user_outlined, color: AuthUi.ink, size: 20),
           ),
         ),
       ],
@@ -488,105 +517,110 @@ class _RecoveryIllustration extends StatelessWidget {
   const _RecoveryIllustration();
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(18),
-    child: Container(
-      height: 200,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE9EAF2), Color(0xFFCACCD8), Color(0xFF9FA3B4)],
+  Widget build(BuildContext context) => Container(
+    height: 200,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(22),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFE9EBEF), Color(0xFFC9CDD6), Color(0xFF545B6A)],
+        stops: [0, 0.55, 1],
+      ),
+      boxShadow: [BoxShadow(color: AuthUi.ink.withValues(alpha: 0.12), blurRadius: 18, offset: const Offset(0, 8))],
+    ),
+    child: Stack(
+      children: [
+        Positioned(
+          right: 28,
+          top: 22,
+          child: Transform.rotate(
+            angle: 0.12,
+            child: Container(
+              width: 172,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: AuthUi.ink.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 10))],
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Password Reset Request',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AuthUi.label),
+                  ),
+                  const SizedBox(height: 8),
+                  const Icon(Icons.mark_email_unread_outlined, color: AuthUi.ink, size: 26),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'A 6-digit code has been sent to your work email.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 8.5, color: AuthUi.muted),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 16,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: AuthUi.ink, borderRadius: BorderRadius.circular(4)),
+                    child: const Text(
+                      'Open Email App',
+                      style: TextStyle(fontSize: 8, color: AuthUi.lime, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: 28,
-            top: 26,
-            child: Transform.rotate(
-              angle: 0.12,
-              child: Container(
-                width: 170,
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: AuthUi.primary.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 10))],
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Password Reset Request',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AuthUi.label),
+        Positioned(
+          left: 30,
+          top: 36,
+          child: Transform.rotate(
+            angle: -0.5,
+            child: Container(
+              width: 110,
+              height: 72,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(10),
+                border: const Border(bottom: BorderSide(color: AuthUi.limeDeep, width: 6)),
+              ),
+              child: const Icon(Icons.lock_outline_rounded, color: AuthUi.faint, size: 18),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 16,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AuthUi.ink.withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: AuthUi.lime.withValues(alpha: 0.5)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.mark_email_unread_outlined, size: 20, color: AuthUi.lime),
+                  SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      'Secure Recovery Token',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: Colors.white),
                     ),
-                    const SizedBox(height: 8),
-                    const Icon(Icons.mark_email_unread_outlined, color: AuthUi.primary, size: 26),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'A 6-digit code has been sent to your work email.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 8.5, color: AuthUi.muted),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 16,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: const Color(0xFF3A3FA0), borderRadius: BorderRadius.circular(4)),
-                      child: const Text(
-                        'Open Email App',
-                        style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-          Positioned(
-            left: 30,
-            top: 40,
-            child: Transform.rotate(
-              angle: -0.5,
-              child: Container(
-                width: 110,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(10),
-                  border: const Border(bottom: BorderSide(color: Color(0xFF4A4FA8), width: 6)),
-                ),
-                child: const Icon(Icons.lock_outline_rounded, color: Color(0xFFB0B4C4), size: 18),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 16,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(99)),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.mark_email_unread_outlined, size: 20, color: AuthUi.primary),
-                    SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'Secure Recovery Token',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AuthUi.ink),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }
@@ -598,11 +632,11 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+    padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
       color: AuthUi.field,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: AuthUi.primary.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 4))],
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: AuthUi.limeLine),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,8 +644,8 @@ class _InfoTile extends StatelessWidget {
         Container(
           width: 42,
           height: 42,
-          decoration: const BoxDecoration(color: Color(0xFFCDE8FB), shape: BoxShape.circle),
-          child: const Icon(Icons.info_outline_rounded, color: AuthUi.ink, size: 22),
+          decoration: const BoxDecoration(color: AuthUi.ink, shape: BoxShape.circle),
+          child: const Icon(Icons.info_outline_rounded, color: AuthUi.lime, size: 22),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -620,10 +654,10 @@ class _InfoTile extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AuthUi.ink),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AuthUi.ink),
               ),
               const SizedBox(height: 4),
-              Text(text, style: TextStyle(fontSize: 15, height: 1.4, color: AuthUi.ink.withValues(alpha: 0.75))),
+              Text(text, style: const TextStyle(fontSize: 14.5, height: 1.4, color: AuthUi.label)),
             ],
           ),
         ),
@@ -641,7 +675,7 @@ class _FieldTitle extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 10),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: AuthUi.ink),
+      style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, letterSpacing: 0.1, color: AuthUi.ink),
     ),
   );
 }
@@ -653,6 +687,7 @@ class _EyeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
+    tooltip: obscure ? 'Show password' : 'Hide password',
     icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 22, color: AuthUi.icon),
     onPressed: onTap,
   );
@@ -671,7 +706,7 @@ class _OtpBoxes extends StatelessWidget {
     return ListenableBuilder(
       listenable: focusNode,
       builder: (context, _) => SizedBox(
-        height: 62,
+        height: 64,
         child: Stack(
           children: [
             Row(
@@ -712,22 +747,22 @@ class _OtpBoxes extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: active ? AuthUi.fieldActive : AuthUi.field,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: active ? AuthUi.primary.withValues(alpha: 0.25) : const Color(0xFFE5E7F5)),
-        boxShadow: active ? [BoxShadow(color: AuthUi.primary.withValues(alpha: 0.18), blurRadius: 10, offset: const Offset(0, 3))] : null,
+        color: active ? Colors.white : (digit != null ? AuthUi.limeSoft : AuthUi.field),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: active ? AuthUi.ink : AuthUi.limeLine, width: active ? 2 : 1),
+        boxShadow: active ? [BoxShadow(color: AuthUi.lime.withValues(alpha: 0.9), spreadRadius: 3)] : null,
       ),
       child: digit != null
           ? Text(
               digit,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600, color: AuthUi.link),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AuthUi.ink),
             )
           : active
-          ? Container(width: 2, height: 28, color: AuthUi.link)
+          ? Container(width: 2, height: 28, color: AuthUi.ink)
           : Container(
               width: 7,
               height: 7,
-              decoration: const BoxDecoration(color: Color(0xFFB8BBCB), shape: BoxShape.circle),
+              decoration: const BoxDecoration(color: Color(0xFFC7CBD3), shape: BoxShape.circle),
             ),
     );
   }
@@ -742,17 +777,17 @@ class _ResendPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final waiting = seconds > 0;
     return Material(
-      color: AuthUi.field,
-      shape: const StadiumBorder(),
+      color: waiting ? AuthUi.limeSoft : AuthUi.ink,
+      shape: StadiumBorder(side: BorderSide(color: waiting ? AuthUi.limeLine : AuthUi.ink)),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: waiting ? null : onResend,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(waiting ? Icons.timer_outlined : Icons.refresh_rounded, size: 20, color: AuthUi.link),
+              Icon(waiting ? Icons.timer_outlined : Icons.refresh_rounded, size: 20, color: waiting ? AuthUi.olive : AuthUi.lime),
               const SizedBox(width: 10),
               if (waiting)
                 Flexible(
@@ -763,7 +798,7 @@ class _ResendPill extends StatelessWidget {
                         const TextSpan(text: 'Resend code in '),
                         TextSpan(
                           text: '0:${seconds.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: AuthUi.ink),
+                          style: const TextStyle(fontWeight: FontWeight.w800, color: AuthUi.ink),
                         ),
                       ],
                     ),
@@ -772,7 +807,7 @@ class _ResendPill extends StatelessWidget {
               else
                 const Text(
                   'Resend code',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AuthUi.link),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
             ],
           ),
@@ -782,6 +817,7 @@ class _ResendPill extends StatelessWidget {
   }
 }
 
+/// Four-segment meter: navy segments, with the last lit lime at full strength.
 class _StrengthMeter extends StatelessWidget {
   const _StrengthMeter({required this.password});
   final String password;
@@ -798,26 +834,32 @@ class _StrengthMeter extends StatelessWidget {
             RegExp(r'[a-z]').hasMatch(p) && RegExp(r'[A-Z]').hasMatch(p),
           ].where((x) => x).length.clamp(1, 4);
     final (label, color) = switch (score) {
-      0 => ('', const Color(0xFFD1D5E4)),
+      0 => ('', AuthUi.faint),
       1 => ('Weak', TF.coral),
       2 => ('Fair', TF.amber),
-      3 => ('Good', TF.green),
-      _ => ('Strong', AuthUi.success),
+      3 => ('Good', AuthUi.ink),
+      _ => ('Strong', AuthUi.ink),
     };
+    Color segment(int i) {
+      if (i >= score) return const Color(0xFFE6E8EC);
+      if (score == 4 && i == 3) return AuthUi.lime;
+      return score <= 2 ? color : AuthUi.ink;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
             const Expanded(
-              child: Text('Strength Meter', style: TextStyle(fontSize: 13.5, letterSpacing: 0.3, color: AuthUi.label)),
+              child: Text('Strength Meter', style: TextStyle(fontSize: 13.5, letterSpacing: 0.2, color: AuthUi.muted)),
             ),
             if (score > 0) ...[
-              Icon(score == 4 ? Icons.verified_outlined : Icons.shield_outlined, size: 18, color: color),
+              Icon(score == 4 ? Icons.verified_outlined : Icons.shield_outlined, size: 18, color: score == 4 ? AuthUi.olive : color),
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color),
               ),
             ],
           ],
@@ -831,7 +873,7 @@ class _StrengthMeter extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   height: 6,
-                  decoration: BoxDecoration(color: i < score ? color : const Color(0xFFE3E5F0), borderRadius: BorderRadius.circular(3)),
+                  decoration: BoxDecoration(color: segment(i), borderRadius: BorderRadius.circular(3)),
                 ),
               ),
             ],

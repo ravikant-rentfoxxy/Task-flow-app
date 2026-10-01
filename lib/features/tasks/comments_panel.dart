@@ -104,21 +104,29 @@ class _CommentsPanelState extends State<CommentsPanel> {
     }
     final roots = byParent[null] ?? const [];
 
-    return Column(children: [
-      Expanded(
-        child: list == null
-            ? const Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 2, height: 70))
-            : roots.isEmpty
-                ? const Center(
-                    child: EmptyState(icon: Icons.mode_comment_outlined, title: 'No comments yet', message: 'Start the conversation below.'),
-                  )
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                    children: [for (final c in roots) ..._thread(c, byParent, 0)],
-                  ),
-      ),
-      if (widget.canComment) _composer() else _readOnlyNote(),
-    ]);
+    return ColoredBox(
+      color: Brand.surface,
+      child: Column(children: [
+        Expanded(
+          child: list == null
+              ? const Padding(padding: EdgeInsets.all(16), child: SkeletonList(count: 2, height: 70))
+              : roots.isEmpty
+                  ? const Center(
+                      child: EmptyState(
+                        icon: Icons.mode_comment_outlined,
+                        color: Brand.navy,
+                        title: 'No comments yet',
+                        message: 'Start the conversation below.',
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      children: [for (final c in roots) ..._thread(c, byParent, 0)],
+                    ),
+        ),
+        if (widget.canComment) _composer() else _readOnlyNote(),
+      ]),
+    );
   }
 
   List<Widget> _thread(Comment c, Map<int?, List<Comment>> byParent, int depth) => [
@@ -133,37 +141,47 @@ class _CommentsPanelState extends State<CommentsPanel> {
     return Container(
       key: ValueKey('comment-${c.id}'),
       margin: EdgeInsets.only(left: (depth.clamp(0, 4)) * 18.0, bottom: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       decoration: BoxDecoration(
-        color: depth == 0 ? TF.surface : TF.paper,
+        color: depth == 0 ? Colors.white : Brand.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: TF.line),
+        border: Border.all(color: Brand.outline),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Avatar(c.authorName, size: 30),
+        Avatar(c.authorName, size: 32),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Flexible(
+              Expanded(
                 child: Text(displayName(c.authorName),
-                    overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Brand.navy)),
               ),
               const SizedBox(width: 8),
-              Text(timeAgo(c.createdAt), style: const TextStyle(fontSize: 11.5, color: TF.muted)),
-              if (c.edited) const Text('  · edited', style: TextStyle(fontSize: 11.5, color: TF.muted, fontStyle: FontStyle.italic)),
+              Text(timeAgo(c.createdAt), style: const TextStyle(fontSize: 11, color: Brand.onVariant)),
+              if (c.edited) const Text(' · edited', style: TextStyle(fontSize: 11, color: Brand.onVariant, fontStyle: FontStyle.italic)),
             ]),
             const SizedBox(height: 4),
             if (editing) ...[
               TextField(key: const Key('edit-comment-field'), controller: editCtrl, minLines: 2, maxLines: 5, autofocus: true),
               const SizedBox(height: 8),
               Row(children: [
-                FilledButton(onPressed: () => _saveEdit(c.id), child: const Text('Save')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Brand.navy, foregroundColor: Brand.lime, minimumSize: const Size(0, 40)),
+                  onPressed: () => _saveEdit(c.id),
+                  child: const Text('Save'),
+                ),
                 const SizedBox(width: 8),
-                TextButton(onPressed: () => setState(() => editingId = null), child: const Text('Cancel')),
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Brand.onVariant),
+                  onPressed: () => setState(() => editingId = null),
+                  child: const Text('Cancel'),
+                ),
               ]),
             ] else
-              SelectableText(c.content, style: const TextStyle(fontSize: 14, color: TF.ink, height: 1.4)),
+              SelectableText(c.content, style: const TextStyle(fontSize: 13, color: Brand.navy, height: 1.45)),
             if (!editing) ...[
               const SizedBox(height: 6),
               Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -174,27 +192,27 @@ class _CommentsPanelState extends State<CommentsPanel> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: r.mine ? TF.primarySoft : TF.paper,
+                        color: r.mine ? Brand.limeLight : Brand.surfaceLow,
                         borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: r.mine ? TF.primary.withValues(alpha: 0.3) : TF.line),
+                        border: Border.all(color: r.mine ? Brand.limeDim : Brand.outline),
                       ),
-                      child: Text('${r.emoji} ${r.count}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      child: Text('${r.emoji} ${r.count}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Brand.navy)),
                     ),
                   ),
                 if (!readOnly) ...[
                   PopupMenuButton<String>(
                     key: ValueKey('react-${c.id}'),
                     tooltip: 'React',
-                    icon: const Icon(Icons.add_reaction_outlined, size: 18, color: TF.muted),
+                    icon: const Icon(Icons.add_reaction_outlined, size: 18, color: Brand.onVariant),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onSelected: (e) => _react(c.id, e),
                     itemBuilder: (_) => [
-                      for (final e in quickEmojis) PopupMenuItem(value: e, height: 40, child: Text(e, style: const TextStyle(fontSize: 20))),
+                      for (final e in quickEmojis) PopupMenuItem(value: e, height: 40, child: Text(e, style: const TextStyle(fontSize: 18))),
                     ],
                   ),
                   TextButton(
-                    style: TextButton.styleFrom(minimumSize: const Size(0, 30), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    style: _linkStyle,
                     onPressed: () => setState(() {
                       replyTo = c;
                       editingId = null;
@@ -203,7 +221,7 @@ class _CommentsPanelState extends State<CommentsPanel> {
                   ),
                   if (c.authorId == meId)
                     TextButton(
-                      style: TextButton.styleFrom(minimumSize: const Size(0, 30), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      style: _linkStyle,
                       onPressed: () => setState(() {
                         editingId = c.id;
                         editCtrl.text = c.content;
@@ -220,8 +238,15 @@ class _CommentsPanelState extends State<CommentsPanel> {
     );
   }
 
+  static final _linkStyle = TextButton.styleFrom(
+    foregroundColor: Brand.navy,
+    minimumSize: const Size(0, 30),
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+  );
+
   Widget _composer() => Container(
-        decoration: const BoxDecoration(color: TF.surface, border: Border(top: BorderSide(color: TF.line))),
+        decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Brand.outline))),
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         child: SafeArea(
           top: false,
@@ -230,41 +255,71 @@ class _CommentsPanelState extends State<CommentsPanel> {
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
-                decoration: BoxDecoration(color: TF.primarySoft, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: Brand.limeLight,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Brand.limeDim.withValues(alpha: 0.6)),
+                ),
                 child: Row(children: [
-                  const Icon(Icons.reply_rounded, size: 16, color: TF.primaryDeep),
+                  const Icon(Icons.reply_rounded, size: 16, color: Brand.navy),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text('Replying to ${displayName(replyTo!.authorName)}',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: TF.primaryDeep)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Brand.navy)),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close_rounded, size: 18),
+                    icon: const Icon(Icons.close_rounded, size: 18, color: Brand.navy),
                     onPressed: () => setState(() => replyTo = null),
                   ),
                 ]),
               ),
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('comment-input'),
-                  controller: input,
-                  minLines: 1,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.newline,
-                  decoration: const InputDecoration(hintText: 'Write a comment…'),
-                  onChanged: (_) => setState(() {}),
+            Container(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+              decoration: BoxDecoration(
+                color: Brand.surfaceLow,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Brand.outline),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('comment-input'),
+                    controller: input,
+                    minLines: 1,
+                    maxLines: 5,
+                    textInputAction: TextInputAction.newline,
+                    style: const TextStyle(fontSize: 13, color: Brand.navy),
+                    decoration: const InputDecoration(
+                      hintText: 'Write a response or question…',
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                key: const Key('comment-send'),
-                style: IconButton.styleFrom(backgroundColor: TF.primary, minimumSize: const Size(46, 46)),
-                onPressed: busy || input.text.trim().isEmpty ? null : _send,
-                icon: const Icon(Icons.send_rounded, size: 20),
-              ),
-            ]),
+                const SizedBox(width: 6),
+                IconButton.filled(
+                  key: const Key('comment-send'),
+                  tooltip: 'Send',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Brand.navy,
+                    foregroundColor: Brand.lime,
+                    disabledBackgroundColor: Brand.surfaceMid,
+                    disabledForegroundColor: Brand.onVariant,
+                    fixedSize: const Size(42, 42),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+                  ),
+                  onPressed: busy || input.text.trim().isEmpty ? null : _send,
+                  icon: const Icon(Icons.send_rounded, size: 19),
+                ),
+              ]),
+            ),
           ]),
         ),
       );
@@ -272,8 +327,8 @@ class _CommentsPanelState extends State<CommentsPanel> {
   Widget _readOnlyNote() => Container(
         width: double.infinity,
         padding: const EdgeInsets.all(12),
-        color: TF.sunken,
+        color: Brand.surfaceLow,
         child: const Text('You are watching this task — comments are read-only.',
-            textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: TF.muted)),
+            textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Brand.onVariant)),
       );
 }

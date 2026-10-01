@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TaskFlow</string>
+	<string>Work Plus</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -32,11 +32,11 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>TaskFlow can attach photos you take to tasks and chats.</string>
+	<string>Work Plus can attach photos you take to tasks and chats.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Connects to a TaskFlow server on your local network.</string>
+	<string>Connects to a Work Plus server on your local network.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>TaskFlow attaches photos you choose to tasks and chats.</string>
+	<string>Work Plus attaches photos you choose to tasks and chats.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -5,6 +5,7 @@ import '../../data/taskflow_api.dart';
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 import '../shell/top_bar.dart';
 
@@ -29,6 +30,9 @@ class _AdminScreenState extends State<AdminScreen> {
   List<TaskType> types = [];
   bool loaded = false;
   String? error;
+
+  /// Admin section filter shown in the hero: all, types, users or teams.
+  String section = 'all';
 
   TaskFlowApi get api => Get.find<TaskFlowApi>();
 
@@ -69,12 +73,15 @@ class _AdminScreenState extends State<AdminScreen> {
     final me = Get.find<AuthController>().me;
     if (me != null && !me.canManage) {
       return const Scaffold(
+        backgroundColor: Brand.surface,
         appBar: TopBar(title: 'Admin'),
         body: Center(child: EmptyState(icon: Icons.lock_outline_rounded, title: 'Admin or Team Head access only')),
       );
     }
     final isAdmin = me?.isAdmin ?? false;
+    bool show(String s) => !isAdmin || section == 'all' || section == s;
     return Scaffold(
+      backgroundColor: Brand.surface,
       appBar: TopBar(title: isAdmin ? 'Admin' : 'Manage'),
       body: !loaded
           ? (error != null ? ErrorView(message: error!, onRetry: _load) : const Padding(padding: EdgeInsets.all(16), child: SkeletonList()))
@@ -82,23 +89,33 @@ class _AdminScreenState extends State<AdminScreen> {
               onRefresh: _load,
               child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 32), children: [
                 PageBody(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    _taskTypes(me!),
-                    if (isAdmin) ...[
-                      const SizedBox(height: 26),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    _hero(me!, isAdmin),
+                    const SizedBox(height: 20),
+                    if (show('types')) _taskTypes(me),
+                    if (isAdmin && show('users')) ...[
+                      if (show('types')) const SizedBox(height: 22),
                       _users(me),
-                      const SizedBox(height: 26),
+                    ],
+                    if (isAdmin && show('teams')) ...[
+                      if (show('types') || show('users')) const SizedBox(height: 22),
                       _teams(),
                     ],
-                    const SizedBox(height: 26),
-                    const Surface(
-                      color: TF.sunken,
-                      borderColor: Colors.transparent,
-                      child: Text(
-                        'Working hours: 10:00 – 19:00 IST, Mon–Sat · Response SLA: 30 working minutes · '
-                        'Escalation: automatic when a task passes its due date. The backend sweeps SLAs automatically.',
-                        style: TextStyle(fontSize: 12.5, color: TF.muted, height: 1.5),
-                      ),
+                    const SizedBox(height: 22),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Brand.surfaceLow, borderRadius: BorderRadius.circular(12)),
+                      child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(Icons.schedule_rounded, size: 16, color: Brand.onVariant),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Working hours: 10:00 – 19:00 IST, Mon–Sat · Response SLA: 30 working minutes · '
+                            'Escalation: automatic when a task passes its due date. The backend sweeps SLAs automatically.',
+                            style: TextStyle(fontSize: 12, color: Brand.onVariant, height: 1.5),
+                          ),
+                        ),
+                      ]),
                     ),
                   ]),
                 ),
@@ -107,70 +124,163 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
+  // ---- Hero ---------------------------------------------------------------------
+
+  Widget _hero(Me me, bool isAdmin) {
+    final activeTypes = types.where((t) => t.isActive).length;
+    final activeUsers = users.where((u) => u.isActive).length;
+    Widget stat(String value, String label) => Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value, maxLines: 1, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, height: 1, letterSpacing: -0.6, color: Brand.lime)),
+            ),
+            const SizedBox(height: 4),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.7))),
+          ]),
+        );
+    return HeroCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        HeroEyebrow(isAdmin ? 'Admin console' : 'Team settings'),
+        const SizedBox(height: 8),
+        HeroTitle(isAdmin ? 'Users, teams & task types' : 'Task types for ${me.team ?? 'your team'}'),
+        const SizedBox(height: 14),
+        Row(children: [
+          if (isAdmin) ...[
+            stat('$activeUsers/${users.length}', 'Active users'),
+            stat('${teams.length}', teams.length == 1 ? 'Team' : 'Teams'),
+          ],
+          stat('$activeTypes/${types.length}', 'Active types'),
+          if (!isAdmin) stat('${types.fold<int>(0, (a, t) => a + t.usedCount)}', 'Tasks using them'),
+        ]),
+        if (isAdmin) ...[
+          const SizedBox(height: 14),
+          HeroSegments(items: [
+            for (final (id, label) in const [('all', 'All'), ('types', 'Types'), ('users', 'Users'), ('teams', 'Teams')])
+              (ValueKey('admin-section-$id'), label, section == id, () => setState(() => section = id)),
+          ]),
+        ],
+      ]),
+    );
+  }
+
+  /// Small lime "add" button used in section headers.
+  Widget _addButton(Key key, String label, IconData icon, VoidCallback onPressed) => FilledButton.icon(
+        key: key,
+        style: FilledButton.styleFrom(
+          backgroundColor: Brand.lime,
+          foregroundColor: Brand.navy,
+          minimumSize: const Size(0, 32),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          visualDensity: VisualDensity.compact,
+          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, size: 16),
+        label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      );
+
+  Widget _sectionTrailing(int count, Widget button) => Row(mainAxisSize: MainAxisSize.min, children: [CountBubble(count), const SizedBox(width: 8), button]);
+
+  /// White outlined list container with thin dividers between rows.
+  Widget _listCard(List<Widget> rows) => Container(
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Brand.outline)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: [
+          for (final r in rows.asMap().entries) ...[
+            if (r.key > 0) const Divider(height: 1, thickness: 1, color: Brand.outline),
+            r.value,
+          ],
+        ]),
+      );
+
+  Widget _iconSquare(IconData icon, {Color bg = Brand.limeLight, Color fg = Brand.navy}) => Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+        child: Icon(icon, size: 18, color: fg),
+      );
+
+  Widget _activeToggle(Key key, bool active, VoidCallback onTap) => Pill(
+        active ? 'Active' : 'Inactive',
+        key: key,
+        dot: true,
+        fg: active ? TF.green : Brand.onVariant,
+        bg: active ? TF.greenSoft : Brand.surfaceLow,
+        onTap: onTap,
+      );
+
+  static const _meta = TextStyle(fontSize: 11.5, color: Brand.onVariant);
+  static const _rowTitle = TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Brand.navy);
+
   // ---- Task types -------------------------------------------------------------
 
   Widget _taskTypes(Me me) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionHeader(
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      BrandSectionTitle(
         title: 'Task types',
-        icon: Icons.sell_outlined,
-        count: types.length,
-        trailing: TextButton.icon(
-          key: const Key('add-type'),
-          onPressed: () => _addType(me),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Add type'),
-        ),
+        trailing: _sectionTrailing(types.length, _addButton(const Key('add-type'), 'Add type', Icons.add_rounded, () => _addType(me))),
       ),
-      Surface(
-        padding: EdgeInsets.zero,
-        child: types.isEmpty
-            ? const Padding(padding: EdgeInsets.all(16), child: Text('No task types yet.', style: TextStyle(color: TF.muted)))
-            : Column(children: [
-                for (final t in types.asMap().entries) ...[
-                  if (t.key > 0) const Divider(),
-                  ListTile(
-                    key: ValueKey('type-${t.value.id}'),
-                    title: Text(t.value.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text('${t.value.teamName ?? '—'} · used by ${t.value.usedCount} task${t.value.usedCount == 1 ? '' : 's'}'),
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Pill(
-                        t.value.isActive ? 'Active' : 'Inactive',
-                        key: ValueKey('type-toggle-${t.value.id}'),
-                        fg: t.value.isActive ? TF.green : TF.muted,
-                        bg: t.value.isActive ? TF.greenSoft : TF.sunken,
-                        onTap: () => _run(
-                          () => api.updateTaskType(t.value.id, {'isActive': !t.value.isActive}),
-                          t.value.isActive ? 'Task type deactivated' : 'Task type activated',
+      types.isEmpty
+          ? BrandCard(child: const Text('No task types yet.', style: TextStyle(fontSize: 13, color: Brand.onVariant)))
+          : _listCard([
+              for (final t in types)
+                Padding(
+                  key: ValueKey('type-${t.id}'),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                  child: Row(children: [
+                    _iconSquare(Icons.sell_outlined, bg: t.isActive ? Brand.limeLight : Brand.surfaceLow, fg: t.isActive ? Brand.navy : Brand.onVariant),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(t.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _rowTitle),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${t.teamName ?? '—'} · used by ${t.usedCount} task${t.usedCount == 1 ? '' : 's'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _meta,
                         ),
+                      ]),
+                    ),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: _activeToggle(
+                        ValueKey('type-toggle-${t.id}'),
+                        t.isActive,
+                        () => _run(() => api.updateTaskType(t.id, {'isActive': !t.isActive}), t.isActive ? 'Task type deactivated' : 'Task type activated'),
                       ),
-                      IconButton(
-                        key: ValueKey('type-edit-${t.value.id}'),
-                        tooltip: 'Rename',
-                        icon: const Icon(Icons.edit_outlined, size: 19),
-                        onPressed: () async {
-                          final v = await promptText(context, title: 'Rename task type', initial: t.value.name, maxLines: 1, confirmLabel: 'Save');
-                          if (v != null) _run(() => api.updateTaskType(t.value.id, {'name': v}), 'Task type updated');
-                        },
-                      ),
-                      IconButton(
-                        key: ValueKey('type-delete-${t.value.id}'),
-                        tooltip: t.value.usedCount > 0 ? 'In use — deactivate instead' : 'Delete',
-                        icon: Icon(Icons.delete_outline_rounded, size: 19, color: t.value.usedCount > 0 ? TF.faint : TF.coral),
-                        onPressed: t.value.usedCount > 0
-                            ? null
-                            : () async {
-                                if (await confirmDialog(context,
-                                    title: 'Delete task type?', message: 'Delete "${t.value.name}"? This cannot be undone.', confirmLabel: 'Delete', destructive: true)) {
-                                  _run(() => api.deleteTaskType(t.value.id), 'Task type deleted');
-                                }
-                              },
-                      ),
-                    ]),
-                  ),
-                ],
-              ]),
-      ),
+                    ),
+                    IconButton(
+                      key: ValueKey('type-edit-${t.id}'),
+                      tooltip: 'Rename',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.edit_outlined, size: 18, color: Brand.navy),
+                      onPressed: () async {
+                        final v = await promptText(context, title: 'Rename task type', initial: t.name, maxLines: 1, confirmLabel: 'Save');
+                        if (v != null) _run(() => api.updateTaskType(t.id, {'name': v}), 'Task type updated');
+                      },
+                    ),
+                    IconButton(
+                      key: ValueKey('type-delete-${t.id}'),
+                      tooltip: t.usedCount > 0 ? 'In use — deactivate instead' : 'Delete',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.delete_outline_rounded, size: 18, color: t.usedCount > 0 ? TF.faint : brandRed),
+                      onPressed: t.usedCount > 0
+                          ? null
+                          : () async {
+                              if (await confirmDialog(context,
+                                  title: 'Delete task type?', message: 'Delete "${t.name}"? This cannot be undone.', confirmLabel: 'Delete', destructive: true)) {
+                                _run(() => api.deleteTaskType(t.id), 'Task type deleted');
+                              }
+                            },
+                    ),
+                  ]),
+                ),
+            ]),
     ]);
   }
 
@@ -222,57 +332,43 @@ class _AdminScreenState extends State<AdminScreen> {
   // ---- Users --------------------------------------------------------------------
 
   Widget _users(Me me) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionHeader(
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      BrandSectionTitle(
         title: 'Users',
-        icon: Icons.person_outline_rounded,
-        color: TF.violet,
-        count: users.length,
-        trailing: TextButton.icon(
-          key: const Key('add-user'),
-          onPressed: _addUser,
-          icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-          label: const Text('Add user'),
-        ),
+        trailing: _sectionTrailing(users.length, _addButton(const Key('add-user'), 'Add user', Icons.person_add_alt_1_outlined, _addUser)),
       ),
-      Surface(
-        padding: EdgeInsets.zero,
-        child: Column(children: [
-          for (final u in users.asMap().entries) ...[
-            if (u.key > 0) const Divider(),
-            _userRow(u.value, me),
-          ],
-        ]),
-      ),
+      users.isEmpty
+          ? BrandCard(child: const Text('No users yet.', style: TextStyle(fontSize: 13, color: Brand.onVariant)))
+          : _listCard([for (final u in users) _userRow(u, me)]),
     ]);
   }
 
   Widget _userRow(AppUser u, Me me) => Padding(
         key: ValueKey('user-${u.id}'),
-        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
-        child: Row(children: [
-          Avatar(u.name, size: 36),
-          const SizedBox(width: 12),
+        padding: const EdgeInsets.fromLTRB(12, 10, 2, 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Opacity(opacity: u.isActive ? 1 : 0.5, child: Avatar(u.name, size: 34)),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(u.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text([u.email, u.phone].whereType<String>().join(' · '), style: const TextStyle(fontSize: 12, color: TF.muted)),
+              Text(u.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _rowTitle),
+              const SizedBox(height: 2),
+              Text([u.email, u.phone].whereType<String>().join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: _meta),
               const SizedBox(height: 6),
               Wrap(spacing: 6, runSpacing: 6, children: [
-                Pill(u.role, fg: TF.primaryDeep, bg: TF.primarySoft),
-                Pill(u.teamName ?? 'No team'),
-                Pill(
-                  u.isActive ? 'Active' : 'Inactive',
-                  key: ValueKey('user-active-${u.id}'),
-                  fg: u.isActive ? TF.green : TF.muted,
-                  bg: u.isActive ? TF.greenSoft : TF.sunken,
-                  onTap: () => _run(() => api.updateUser(u.id, {'isActive': !u.isActive}), 'User updated'),
+                Pill(u.role, fg: Brand.lime, bg: Brand.navy),
+                Pill(u.teamName ?? 'No team', fg: Brand.navy, bg: Brand.surfaceLow),
+                _activeToggle(
+                  ValueKey('user-active-${u.id}'),
+                  u.isActive,
+                  () => _run(() => api.updateUser(u.id, {'isActive': !u.isActive}), 'User updated'),
                 ),
               ]),
             ]),
           ),
           PopupMenuButton<String>(
             key: ValueKey('user-menu-${u.id}'),
+            icon: const Icon(Icons.more_vert_rounded, size: 20, color: Brand.onVariant),
             onSelected: (v) => _userAction(v, u, me),
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'role', child: Text('Change role')),
@@ -410,19 +506,12 @@ class _AdminScreenState extends State<AdminScreen> {
   // ---- Teams --------------------------------------------------------------------
 
   Widget _teams() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionHeader(
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      BrandSectionTitle(
         title: 'Teams',
-        icon: Icons.groups_2_outlined,
-        color: TF.sky,
-        count: teams.length,
-        trailing: TextButton.icon(
-          key: const Key('add-team'),
-          onPressed: () => _teamForm(),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Add team'),
-        ),
+        trailing: _sectionTrailing(teams.length, _addButton(const Key('add-team'), 'Add team', Icons.add_rounded, () => _teamForm())),
       ),
+      if (teams.isEmpty) BrandCard(child: const Text('No teams yet.', style: TextStyle(fontSize: 13, color: Brand.onVariant))),
       LayoutBuilder(builder: (context, c) {
         final cols = c.maxWidth >= 800 ? 3 : (c.maxWidth >= 500 ? 2 : 1);
         final w = (c.maxWidth - (cols - 1) * 10) / cols;
@@ -430,27 +519,36 @@ class _AdminScreenState extends State<AdminScreen> {
           for (final t in teams)
             SizedBox(
               width: w,
-              child: Surface(
+              child: BrandCard(
                 key: ValueKey('team-${t.id}'),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+                child: Row(children: [
+                  _iconSquare(Icons.groups_2_outlined, bg: Brand.navy, fg: Brand.lime),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(t.name, style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 4),
-                      Text('Manager: ${t.managerName ?? '—'}', style: const TextStyle(fontSize: 12.5, color: TF.muted)),
-                      Text('${t.memberCount} member${t.memberCount == 1 ? '' : 's'}', style: const TextStyle(fontSize: 12.5, color: TF.faint)),
+                      Text(t.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _rowTitle),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Manager: ${t.managerName ?? '—'} · ${t.memberCount} member${t.memberCount == 1 ? '' : 's'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _meta,
+                      ),
                     ]),
                   ),
                   IconButton(
                     key: ValueKey('team-edit-${t.id}'),
                     tooltip: 'Edit',
-                    icon: const Icon(Icons.edit_outlined, size: 19),
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.edit_outlined, size: 18, color: Brand.navy),
                     onPressed: () => _teamForm(team: t),
                   ),
                   IconButton(
                     key: ValueKey('team-delete-${t.id}'),
                     tooltip: 'Delete',
-                    icon: const Icon(Icons.delete_outline_rounded, size: 19, color: TF.coral),
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: brandRed),
                     onPressed: () async {
                       if (await confirmDialog(context,
                           title: 'Delete team?', message: 'Delete team "${t.name}"? Remove all members first.', confirmLabel: 'Delete', destructive: true)) {

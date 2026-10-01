@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../data/taskflow_api.dart';
 import '../../models/models.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 
 Future<bool?> showReassignSheet(BuildContext context, Task task) =>
@@ -52,35 +53,87 @@ class _ReassignSheetState extends State<ReassignSheet> {
         .where((u) => q.isEmpty || u.name.toLowerCase().contains(q) || (u.email?.toLowerCase().contains(q) ?? false))
         .toList();
     return Column(children: [
-      SheetTitle('Change assignee', subtitle: 'The task goes back to "Accept response" for the new person.'),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const BrandSectionTitle(title: 'Change assignee', padding: EdgeInsets.only(bottom: 6)),
+          const Text('The task goes back to "Accept response" for the new person.',
+              maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Brand.onVariant)),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(12)),
+            child: Row(children: [
+              Expanded(
+                child: Text(widget.task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text('Now: ${widget.task.who}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Brand.lime)),
+              ),
+            ]),
+          ),
+        ]),
+      ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         child: TextField(
+          style: const TextStyle(fontSize: 13),
           decoration: const InputDecoration(hintText: 'Search by name or email…', prefixIcon: Icon(Icons.search_rounded, size: 20)),
           onChanged: (v) => setState(() => query = v),
         ),
       ),
+      if (users != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+          child: BrandSectionTitle(title: 'People', count: list.length, padding: EdgeInsets.zero),
+        ),
       Expanded(
         child: users == null
             ? const Padding(padding: EdgeInsets.all(16), child: SkeletonList(height: 56))
-            : ListView(children: [
-                for (final u in list)
-                  ListTile(
-                    key: ValueKey('reassign-${u.id}'),
-                    enabled: busyId == null && u.id != widget.task.assigneeId,
-                    leading: Avatar(u.name, size: 36),
-                    title: Text(u.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(u.email ?? '', style: const TextStyle(fontSize: 12.5)),
-                    trailing: u.id == widget.task.assigneeId
-                        ? const Pill('Current', fg: TF.primaryDeep, bg: TF.primarySoft)
-                        : busyId == u.id
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : null,
-                    onTap: () => _pick(u),
-                  ),
+            : ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+                for (final u in list) _row(u),
                 if (list.isEmpty) const EmptyState(icon: Icons.person_search_rounded, title: 'No users found'),
               ]),
       ),
     ]);
+  }
+
+  Widget _row(AppUser u) {
+    final current = u.id == widget.task.assigneeId;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: current ? Brand.limeLight : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: current ? Brand.limeDim : Brand.outline),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          key: ValueKey('reassign-${u.id}'),
+          enabled: busyId == null && !current,
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          leading: Avatar(u.name, size: 34),
+          title: Text(u.name,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Brand.navy)),
+          subtitle: Text([u.email ?? '', if (u.teamName != null) u.teamName!].where((s) => s.isNotEmpty).join(' · '),
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Brand.onVariant)),
+          trailing: current
+              ? const LimeTag('Current')
+              : busyId == u.id
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Brand.navy))
+                  : const Icon(Icons.chevron_right_rounded, color: Brand.onVariant),
+          onTap: () => _pick(u),
+        ),
+      ),
+    );
   }
 }

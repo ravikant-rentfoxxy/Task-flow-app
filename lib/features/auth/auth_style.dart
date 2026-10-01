@@ -1,107 +1,116 @@
 import 'package:flutter/material.dart';
 
-/// Signed-out screens palette (indigo on lavender), kept local so the rest of
+import '../../widgets/common.dart';
+
+/// Signed-out screens palette (lime on navy), kept local so the rest of
 /// the app keeps the TF theme.
 class AuthUi {
-  static const bg = Color(0xFFF7F6FD);
-  static const band = Color(0xFFF2F1FB);
+  static const bg = Color(0xFFF7F8FA);
   static const ink = Color(0xFF111827);
   static const label = Color(0xFF374151);
   static const icon = Color(0xFF4B5563);
   static const muted = Color(0xFF6B7280);
-  static const field = Color(0xFFF0F1FE);
-  static const fieldActive = Color(0xFFDEE1FB);
-  static const primary = Color(0xFF4F46E5);
-  static const link = Color(0xFF3B2FD9);
-  static const online = Color(0xFF1F8A70);
-  static const success = Color(0xFF0F6E4A);
+  static const faint = Color(0xFF9CA3AF);
+  static const lime = Color(0xFFCBF231);
+  static const limeDeep = Color(0xFFBFE82A);
+  static const limeSoft = Color(0xFFF2F7DF);
+  static const limeLine = Color(0xFFE4F0A6);
+  static const olive = Color(0xFF4D6B00);
+  static const field = Color(0xFFF3F6E6);
+  static const success = Color(0xFF3F7A12);
 
   static const inputText = TextStyle(fontSize: 16.5, color: ink, letterSpacing: 0.1);
 
-  static InputDecoration input({required String hint, IconData? icon, Widget? suffix, Color fill = field}) {
-    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none);
+  /// Lime-tinted field; [outlined] adds a thin lime border when idle.
+  static InputDecoration input({required String hint, IconData? icon, Widget? suffix, bool outlined = false}) {
+    final idle = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: outlined ? const BorderSide(color: limeLine, width: 1.2) : BorderSide.none,
+    );
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 16),
+      hintStyle: const TextStyle(color: faint, fontSize: 16),
       filled: true,
-      fillColor: fill,
+      fillColor: field,
       isDense: false,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       prefixIcon: icon == null
           ? null
           : Padding(
-              padding: const EdgeInsets.only(left: 12, right: 6),
+              padding: const EdgeInsets.only(left: 14, right: 6),
               child: Icon(icon, size: 24, color: AuthUi.icon),
             ),
-      prefixIconConstraints: const BoxConstraints(minWidth: 48),
+      prefixIconConstraints: const BoxConstraints(minWidth: 52),
       suffixIcon: suffix == null ? null : Padding(padding: const EdgeInsets.only(right: 6), child: suffix),
-      border: border,
-      enabledBorder: border,
+      border: idle,
+      enabledBorder: idle,
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: primary.withValues(alpha: 0.7), width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: ink, width: 1.5),
       ),
     );
   }
 
-  /// Full-width indigo call-to-action with a trailing arrow and soft glow.
-  static Widget primaryButton({Key? key, required String label, required VoidCallback? onPressed, bool busy = false}) => DecoratedBox(
+  /// Full-width navy call-to-action with an optional lime trailing arrow.
+  static Widget primaryButton({
+    Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    bool busy = false,
+    bool arrow = true,
+  }) => DecoratedBox(
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [BoxShadow(color: primary.withValues(alpha: 0.28), blurRadius: 14, offset: const Offset(0, 6))],
+      borderRadius: BorderRadius.circular(18),
+      boxShadow: onPressed == null
+          ? null
+          : [BoxShadow(color: ink.withValues(alpha: 0.22), blurRadius: 16, offset: const Offset(0, 8))],
     ),
     child: FilledButton(
       key: key,
       style: FilledButton.styleFrom(
-        backgroundColor: primary,
-        disabledBackgroundColor: primary.withValues(alpha: 0.6),
+        backgroundColor: ink,
+        disabledBackgroundColor: ink.withValues(alpha: 0.45),
         foregroundColor: Colors.white,
         disabledForegroundColor: Colors.white,
-        minimumSize: const Size.fromHeight(54),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        minimumSize: const Size.fromHeight(58),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        textStyle: const TextStyle(fontSize: 17.5, fontWeight: FontWeight.w700, letterSpacing: 0.1),
       ),
       onPressed: onPressed,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label),
-          if (!busy) ...[const SizedBox(width: 10), const Icon(Icons.arrow_forward_rounded, size: 22)],
+          Flexible(
+            child: FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1)),
+          ),
+          if (arrow && !busy) ...[
+            const SizedBox(width: 12),
+            Icon(Icons.arrow_forward_rounded, size: 22, color: onPressed == null ? Colors.white : lime),
+          ],
         ],
       ),
     ),
   );
 }
 
+/// Work+ logo with a soft white ring.
 class AuthLogoTile extends StatelessWidget {
-  const AuthLogoTile({super.key, this.size = 72, this.light = false});
+  const AuthLogoTile({super.key, this.size = 72});
   final double size;
-  final bool light;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    alignment: Alignment.center,
+    padding: EdgeInsets.all(size > 48 ? 4 : 0),
     decoration: BoxDecoration(
-      color: light ? Colors.white : AuthUi.ink,
-      borderRadius: BorderRadius.circular(size * 0.24),
-      border: Border.all(color: Colors.white, width: size > 48 ? 2 : 1),
-      boxShadow: [BoxShadow(color: AuthUi.ink.withValues(alpha: 0.12), blurRadius: 16, offset: const Offset(0, 6))],
+      shape: BoxShape.circle,
+      color: const Color(0xFFE9EBEE),
+      boxShadow: [BoxShadow(color: AuthUi.ink.withValues(alpha: 0.14), blurRadius: 18, offset: const Offset(0, 6))],
     ),
-    child: Text(
-      'TF',
-      style: TextStyle(
-        color: light ? AuthUi.primary : Colors.white,
-        fontSize: size * 0.4,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.5,
-      ),
-    ),
+    child: AppLogo(size: size),
   );
 }
 
-/// White rounded card with a faint indigo shadow.
+/// White rounded card with a faint shadow.
 class AuthCard extends StatelessWidget {
   const AuthCard({super.key, required this.children, this.padding = const EdgeInsets.fromLTRB(20, 24, 20, 24)});
   final List<Widget> children;
@@ -112,42 +121,62 @@ class AuthCard extends StatelessWidget {
     padding: padding,
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [BoxShadow(color: AuthUi.primary.withValues(alpha: 0.07), blurRadius: 30, offset: const Offset(0, 12))],
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: const Color(0xFFEFF1F4)),
+      boxShadow: [BoxShadow(color: AuthUi.ink.withValues(alpha: 0.04), blurRadius: 24, offset: const Offset(0, 10))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
   );
 }
 
-/// Back · TF tile · TaskFlow ········ title · avatar.
+/// Small lime-tinted pill used for badges and footers.
+class AuthPill extends StatelessWidget {
+  const AuthPill({super.key, required this.child, this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 6)});
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: padding,
+    decoration: BoxDecoration(
+      color: AuthUi.limeSoft,
+      borderRadius: BorderRadius.circular(99),
+      border: Border.all(color: AuthUi.limeLine),
+    ),
+    child: child,
+  );
+}
+
+/// Back · logo · Work Plus ········ title · avatar.
 class AuthTopBar extends StatelessWidget implements PreferredSizeWidget {
   const AuthTopBar({super.key, required this.title, this.onBack});
   final String title;
   final VoidCallback? onBack;
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(65);
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white.withValues(alpha: 0.7),
+    color: Colors.white.withValues(alpha: 0.85),
     child: SafeArea(
       bottom: false,
-      child: SizedBox(
-        height: 64,
+      child: Container(
+        height: 65,
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE9EBEF)))),
         child: Row(
           children: [
             IconButton(
               tooltip: 'Back',
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: AuthUi.label),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: AuthUi.ink),
               onPressed: onBack ?? () => Navigator.maybePop(context),
             ),
-            const SizedBox(width: 4),
-            const AuthLogoTile(size: 34),
+            const SizedBox(width: 2),
+            const AppLogo(size: 36),
             const SizedBox(width: 10),
             const Text(
-              'TaskFlow',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AuthUi.ink),
+              'Work Plus',
+              style: TextStyle(fontFamily: kBrandFont, fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.2, color: AuthUi.ink),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -156,15 +185,15 @@ class AuthTopBar extends StatelessWidget implements PreferredSizeWidget {
                 textAlign: TextAlign.right,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, letterSpacing: 0.2, color: AuthUi.label),
+                style: const TextStyle(fontSize: 14, letterSpacing: 0.2, color: AuthUi.muted),
               ),
             ),
             const SizedBox(width: 10),
             Container(
               width: 38,
               height: 38,
-              decoration: const BoxDecoration(color: AuthUi.primary, shape: BoxShape.circle),
-              child: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 22),
+              decoration: const BoxDecoration(color: AuthUi.ink, shape: BoxShape.circle),
+              child: const Icon(Icons.person_outline_rounded, color: AuthUi.lime, size: 22),
             ),
             const SizedBox(width: 14),
           ],

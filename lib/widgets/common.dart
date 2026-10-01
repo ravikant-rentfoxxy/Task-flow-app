@@ -9,6 +9,24 @@ import '../theme/app_theme.dart';
 
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
+/// The round "Work+" brand mark.
+/// Font for the "Work Plus" wordmark, matching the logo lettering.
+const kBrandFont = 'Montserrat';
+
+class AppLogo extends StatelessWidget {
+  const AppLogo({super.key, this.size = 40});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/logo/work_plus_logo.png',
+    width: size,
+    height: size,
+    filterQuality: FilterQuality.medium,
+    semanticLabel: 'Work Plus',
+  );
+}
+
 void toast(String message) {
   messengerKey.currentState
     ?..hideCurrentSnackBar()
@@ -108,7 +126,7 @@ class Pill extends StatelessWidget {
         Flexible(
           child: Text(label,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 0.1)),
+              style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.1)),
         ),
       ]),
     );
@@ -165,14 +183,14 @@ class SectionHeader extends StatelessWidget {
         Flexible(
           child: Text(title,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: TF.ink)),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: TF.ink)),
         ),
         if (count != null) ...[
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
             decoration: BoxDecoration(color: TF.primarySoft, borderRadius: BorderRadius.circular(99)),
-            child: Text('$count', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: TF.primaryDeep)),
+            child: Text('$count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TF.primaryDeep)),
           ),
         ],
         const Spacer(),
@@ -274,7 +292,7 @@ class InfoBanner extends StatelessWidget {
                   child: Text(title!.toUpperCase(),
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: fg)),
                 ),
-              SelectableText(text, style: TextStyle(color: fg, fontSize: 13.5, height: 1.4)),
+              SelectableText(text, style: TextStyle(color: fg, fontSize: 12.5, height: 1.4)),
               if (child != null) ...[const SizedBox(height: 10), child!],
             ]),
           ),
@@ -464,7 +482,7 @@ Future<String?> promptText(
             if (minLength > 0 && value.isNotEmpty && value.length < minLength)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text('At least $minLength characters', style: const TextStyle(color: TF.coral, fontSize: 12)),
+                child: Text('At least $minLength characters', style: const TextStyle(color: TF.coral, fontSize: 11.5)),
               ),
           ]),
         ),
@@ -616,7 +634,7 @@ class _SearchPickerState<T> extends State<_SearchPicker<T>> {
                     ListTile(
                       key: ValueKey('pick-${o.label}'),
                       leading: o.leading,
-                      title: Text(o.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5)),
+                      title: Text(o.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
                       subtitle: o.subtitle == null ? null : Text(o.subtitle!, style: Theme.of(context).textTheme.bodySmall),
                       trailing: o.value == widget.selected ? const Icon(Icons.check_rounded, color: TF.primary) : null,
                       onTap: () => Navigator.pop(context, o.value),
@@ -650,7 +668,7 @@ class PickerField extends StatelessWidget {
           child: Text(label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 14.5, color: placeholder ? TF.faint : TF.ink)),
+              style: TextStyle(fontSize: 13.5, color: placeholder ? TF.faint : TF.ink)),
         ),
       );
 }
@@ -662,7 +680,7 @@ class FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 6, top: 4),
-        child: Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: TF.inkSoft)),
+        child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TF.inkSoft)),
       );
 }
 

@@ -49,7 +49,8 @@ class NotificationBell extends StatelessWidget {
       onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
       icon: Badge(
         isLabelVisible: unread > 0,
-        backgroundColor: TF.coral,
+        backgroundColor: Brand.navy,
+        textColor: Brand.lime,
         label: Text(unread > 9 ? '9+' : '$unread', key: const Key('notification-count')),
         child: const Icon(Icons.notifications_none_rounded),
       ),
@@ -83,7 +84,7 @@ class AccountButton extends StatelessWidget {
           enabled: false,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(displayName(me.name), style: const TextStyle(fontWeight: FontWeight.w700, color: TF.ink)),
-            Text(me.email, style: const TextStyle(fontSize: 12, color: TF.muted)),
+            Text(me.email, style: const TextStyle(fontSize: 11.5, color: TF.muted)),
             const SizedBox(height: 6),
             Pill(me.roleLabel, fg: TF.primaryDeep, bg: TF.primarySoft),
           ]),
@@ -99,13 +100,18 @@ class AccountButton extends StatelessWidget {
           ),
         ),
       ],
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Avatar(me.name, size: 34, dark: true)),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Brand.lime.withValues(alpha: 0.8), width: 2)),
+        child: Avatar(me.name, size: 32, dark: true),
+      ),
     );
   }
 }
 
-/// White header with the TF tile, "TaskFlow" and the screen name, plus bell and account.
-/// White header with the TF tile, "TaskFlow" and the screen name, plus bell and account.
+/// White header with the logo, "Work Plus" and the screen name, plus bell and account.
+/// White header with the logo, "Work Plus" and the screen name, plus bell and account.
 class BrandTopBar extends StatelessWidget implements PreferredSizeWidget {
   const BrandTopBar({super.key, required this.subtitle});
   final String subtitle;
@@ -127,7 +133,7 @@ class BrandTopBar extends StatelessWidget implements PreferredSizeWidget {
   );
 }
 
-/// Back (when pushed) · TF tile · TaskFlow / [subtitle] ······ [actions] · bell · account.
+/// Back (when pushed) · logo · Work Plus / [subtitle] ······ [actions] · bell · account.
 class _BrandRow extends StatelessWidget {
   const _BrandRow({required this.subtitle, this.actions = const []});
   final String subtitle;
@@ -147,13 +153,7 @@ class _BrandRow extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Brand.inkSoft),
             onPressed: () => Navigator.maybePop(context),
           ),
-        Container(
-          width: 42,
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: Brand.ink, borderRadius: BorderRadius.circular(11)),
-          child: const Text('TF', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
-        ),
+        const AppLogo(size: 42),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -161,14 +161,14 @@ class _BrandRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'TaskFlow',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: Brand.ink, height: 1.1),
+                'Work Plus',
+                style: TextStyle(fontFamily: kBrandFont, fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.2, color: Brand.ink, height: 1.1),
               ),
               Text(
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: Brand.muted, letterSpacing: 0.2),
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Brand.muted, letterSpacing: 0.2),
               ),
             ],
           ),
@@ -182,7 +182,7 @@ class _BrandRow extends StatelessWidget {
   );
 }
 
-/// AppBar title for pushed pages: small TF tile + [child] (usually the page name).
+/// AppBar title for pushed pages: small logo + [child] (usually the page name).
 class BrandTitle extends StatelessWidget {
   const BrandTitle({super.key, required this.child});
   BrandTitle.text(String text, {super.key}) : child = Text(text, overflow: TextOverflow.ellipsis);
@@ -192,13 +192,7 @@ class BrandTitle extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Container(
-        width: 32,
-        height: 32,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: Brand.ink, borderRadius: BorderRadius.circular(9)),
-        child: const Text('TF', style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
-      ),
+      const AppLogo(size: 32),
       const SizedBox(width: 10),
       Flexible(child: child),
     ],

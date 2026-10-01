@@ -13,6 +13,7 @@ import '../../state/realtime_controller.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/attachments.dart';
+import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 import '../../widgets/files.dart';
 import '../shell/top_bar.dart';
@@ -108,27 +109,26 @@ class _ChatScreenState extends State<ChatScreen> {
     final convs = (conversations ?? []).where((c) => q.isEmpty || c.title.toLowerCase().contains(q)).toList();
     final withConv = (conversations ?? []).where((c) => !c.isGroup).map((c) => c.memberUserId).toSet();
     final people = targets.where((t) => !withConv.contains(t.id) && (q.isEmpty || t.name.toLowerCase().contains(q))).toList();
+    final live = Get.find<RealtimeController>().connected.value;
+    final onlineCount = targets.where((t) => t.id != me?.id && online.contains(t.id)).length;
 
     return LayoutBuilder(builder: (context, c) {
       final wide = c.maxWidth >= 900;
       final list = RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 24), children: [
-          TextField(
-            key: const Key('chat-search'),
-            decoration: InputDecoration(
-              hintText: 'Search people or groups…',
-              prefixIcon: const Icon(Icons.search_rounded, size: 22),
-              fillColor: TF.surface,
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: TF.line)),
-            ),
-            onChanged: (v) => setState(() => query = v),
+          _ChatHero(
+            live: live,
+            unread: unread.total,
+            chats: conversations?.length,
+            onlineCount: onlineCount,
+            onSearch: (v) => setState(() => query = v),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           if (conversations == null && error == null) const SkeletonList(height: 62),
           if (error != null && conversations == null) ErrorView(message: error!, onRetry: _load),
           if (convs.isNotEmpty) ...[
-            const Padding(padding: EdgeInsets.fromLTRB(4, 4, 4, 6), child: Text('RECENT', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 1, color: TF.primaryDeep))),
+            BrandSectionTitle(title: 'Recent', count: convs.length),
             for (final conv in convs)
               _ConvTile(
                 key: ValueKey('conv-${conv.id}'),
@@ -148,7 +148,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
           ],
           if (people.isNotEmpty) ...[
-            const Padding(padding: EdgeInsets.fromLTRB(4, 14, 4, 6), child: Text('PEOPLE', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 1, color: TF.primaryDeep))),
+            BrandSectionTitle(title: 'People', count: people.length, padding: EdgeInsets.only(top: convs.isEmpty ? 0 : 10, bottom: 10)),
             for (final t in people)
               _ConvTile(
                 key: ValueKey('person-${t.id}'),
@@ -165,6 +165,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       return Scaffold(
+        backgroundColor: Brand.surface,
         appBar: TopBar(title: 'Chat', actions: [
           if (me?.isAdminOrCeo ?? false)
             IconButton(key: const Key('new-group'), tooltip: 'New group', onPressed: _newGroup, icon: const Icon(Icons.group_add_outlined)),
@@ -173,7 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ? list
             : Row(children: [
                 SizedBox(width: 340, child: list),
-                const VerticalDivider(width: 1),
+                const VerticalDivider(width: 1, color: Brand.outline),
                 Expanded(
                   child: selected == null
                       ? const Center(child: EmptyState(icon: Icons.forum_outlined, title: 'Select a chat', message: 'Pick a conversation or a person to start.'))
@@ -188,6 +189,86 @@ class _ChatScreenState extends State<ChatScreen> {
               ]),
       );
     });
+  }
+}
+
+/// Navy hero for the chat list: live pill, unread summary and the search field.
+class _ChatHero extends StatelessWidget {
+  const _ChatHero({required this.live, required this.unread, required this.chats, required this.onlineCount, required this.onSearch});
+  final bool live;
+  final int unread;
+  final int? chats;
+  final int onlineCount;
+  final ValueChanged<String> onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.10)));
+    final facts = [
+      if (chats != null) '$chats ${chats == 1 ? 'conversation' : 'conversations'}',
+      '$onlineCount online',
+    ].join(' · ');
+    return HeroCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              if (live) ...[const LivePill(), const SizedBox(width: 10)],
+              Expanded(
+                child: Align(alignment: Alignment.centerRight, child: HeroEyebrow(facts)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const HeroTitle('Messages', maxLines: 1),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (unread > 0) ...[
+                Container(
+                  constraints: const BoxConstraints(minWidth: 26),
+                  height: 26,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: Brand.lime, borderRadius: BorderRadius.circular(99)),
+                  child: Text('$unread', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Brand.navy)),
+                ),
+                const SizedBox(width: 8),
+              ] else ...[
+                const Icon(Icons.check_circle_rounded, size: 18, color: Brand.lime),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  unread > 0 ? (unread == 1 ? 'unread message' : 'unread messages') : "You're all caught up",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.8)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            key: const Key('chat-search'),
+            style: const TextStyle(fontSize: 13, color: Colors.white),
+            cursorColor: Brand.lime,
+            decoration: InputDecoration(
+              hintText: 'Search people or groups…',
+              hintStyle: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.55)),
+              prefixIcon: Icon(Icons.search_rounded, size: 20, color: Colors.white.withValues(alpha: 0.7)),
+              fillColor: Colors.white.withValues(alpha: 0.08),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: border,
+              enabledBorder: border,
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Brand.lime, width: 1.4)),
+            ),
+            onChanged: onSearch,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -214,63 +295,100 @@ class _ConvTile extends StatelessWidget {
   final bool selected;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? TF.primary.withValues(alpha: 0.35) : TF.line),
-          boxShadow: Brand.shadow,
-        ),
-        child: Material(
-        color: selected ? TF.primarySoft : TF.surface,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            child: Row(children: [
-              group
-                  ? Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(color: TF.violetSoft, borderRadius: BorderRadius.circular(14)),
-                      child: const Icon(Icons.groups_2_rounded, color: TF.violet),
-                    )
-                  : Avatar(title, size: 42, online: online),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(displayName(title),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w700, fontSize: 14.5)),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Material(
+      color: selected ? Brand.limeLight : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: selected ? Brand.limeDim : (unread > 0 ? Brand.navy.withValues(alpha: 0.25) : Brand.outline)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Stack(
+          children: [
+            if (unread > 0 || selected)
+              Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 3, color: selected ? Brand.navy : Brand.lime)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Row(
+                children: [
+                  group
+                      ? Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(12)),
+                          child: const Icon(Icons.groups_2_rounded, color: Brand.lime, size: 20),
+                        )
+                      : Avatar(title, size: 40, online: online),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                displayName(title),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w700, fontSize: 14, color: Brand.navy),
+                              ),
+                            ),
+                            if (time != null) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                timeAgo(time),
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w500,
+                                  color: unread > 0 ? Brand.navy : TF.faint,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                decodeMentionsForDisplay(subtitle).replaceAll('\n', ' '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12, color: unread > 0 ? Brand.navy : Brand.onVariant),
+                              ),
+                            ),
+                            if (unread > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 20),
+                                height: 20,
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(99)),
+                                child: Text(
+                                  unread > 9 ? '9+' : '$unread',
+                                  style: const TextStyle(color: Brand.lime, fontSize: 10.5, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ),
-                    if (time != null) Text(timeAgo(time), style: const TextStyle(fontSize: 11, color: TF.faint)),
-                  ]),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    Expanded(
-                      child: Text(decodeMentionsForDisplay(subtitle).replaceAll('\n', ' '),
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: TF.muted)),
-                    ),
-                    if (unread > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(color: TF.primary, borderRadius: BorderRadius.circular(99)),
-                        child: Text(unread > 9 ? '9+' : '$unread',
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-                      ),
-                  ]),
-                ]),
+                  ),
+                ],
               ),
-            ]),
-          ),
+            ),
+          ],
         ),
-        ),
-      );
+      ),
+    ),
+  );
 }
 
 class ChatThreadScreen extends StatelessWidget {
@@ -281,6 +399,7 @@ class ChatThreadScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+        backgroundColor: Brand.surface,
         body: SafeArea(
           child: ChatThread(conversationId: conversationId, userId: userId, attachTask: attachTask, showHeader: true, showBack: true),
         ),
@@ -528,7 +647,7 @@ class _ChatThreadState extends State<ChatThread> {
                     Navigator.pop(ctx);
                     _react(m, e);
                   },
-                  child: Padding(padding: const EdgeInsets.all(8), child: Text(e, style: const TextStyle(fontSize: 26))),
+                  child: Padding(padding: const EdgeInsets.all(8), child: Text(e, style: const TextStyle(fontSize: 22))),
                 ),
             ]),
           ),
@@ -579,7 +698,7 @@ class _ChatThreadState extends State<ChatThread> {
       if (widget.showHeader)
         Container(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-          decoration: const BoxDecoration(color: TF.surface, border: Border(bottom: BorderSide(color: TF.line))),
+          decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Brand.outline))),
           child: Row(children: [
             if (widget.showBack) const BackButton(),
             if (c != null) ...[
@@ -587,14 +706,20 @@ class _ChatThreadState extends State<ChatThread> {
                   ? Container(
                       width: 38,
                       height: 38,
-                      decoration: BoxDecoration(color: TF.violetSoft, borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.groups_2_rounded, color: TF.violet, size: 20),
+                      decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.groups_2_rounded, color: Brand.lime, size: 20),
                     )
                   : Avatar(c.title, size: 38, online: online.contains(c.memberUserId)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(displayName(c.title), key: const Key('thread-title'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+                  Text(
+                    displayName(c.title),
+                    key: const Key('thread-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Brand.navy),
+                  ),
                   Text(
                     typingUsers.isNotEmpty
                         ? '${typingUsers.values.map(firstName).join(', ')} typing…'
@@ -603,17 +728,28 @@ class _ChatThreadState extends State<ChatThread> {
                             : (online.contains(c.memberUserId) ? 'Online' : (c.memberEmail ?? c.memberRole ?? '')),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: typingUsers.isNotEmpty ? TF.primary : TF.muted),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: typingUsers.isNotEmpty || (!c.isGroup && online.contains(c.memberUserId)) ? FontWeight.w700 : FontWeight.w500,
+                      color: typingUsers.isNotEmpty ? Brand.navy : (!c.isGroup && online.contains(c.memberUserId) ? TF.green : Brand.onVariant),
+                    ),
                   ),
                 ]),
               ),
               if (!c.isGroup)
-                IconButton(key: const Key('chat-assign-task'), tooltip: 'Assign a task', icon: const Icon(Icons.add_task_rounded), onPressed: _assignTask),
+                IconButton(
+                  key: const Key('chat-assign-task'),
+                  tooltip: 'Assign a task',
+                  style: IconButton.styleFrom(backgroundColor: Brand.lime, foregroundColor: Brand.navy),
+                  icon: const Icon(Icons.add_task_rounded, size: 20),
+                  onPressed: _assignTask,
+                ),
               if (c.isGroup && (me?.isAdminOrCeo ?? false))
                 IconButton(
                   key: const Key('manage-group'),
                   tooltip: 'Manage group',
-                  icon: const Icon(Icons.settings_outlined),
+                  style: IconButton.styleFrom(backgroundColor: Brand.surfaceLow, foregroundColor: Brand.navy),
+                  icon: const Icon(Icons.settings_outlined, size: 20),
                   onPressed: () async {
                     final g = await showGroupForm(context, group: c);
                     if (g != null) setState(() => conv = g);
@@ -632,7 +768,7 @@ class _ChatThreadState extends State<ChatThread> {
                     ? const Center(child: EmptyState(icon: Icons.waving_hand_outlined, title: 'Say hello', message: 'No messages yet.'))
                     : ListView.builder(
                         controller: scroll,
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                         itemCount: messages.length,
                         itemBuilder: (ctx, i) {
                           final m = messages[i];
@@ -643,7 +779,7 @@ class _ChatThreadState extends State<ChatThread> {
                             if (showDay)
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 10),
-                                child: Pill(fmtDayLabel(m.createdAt!), fg: TF.muted, bg: TF.sunken),
+                                child: Pill(fmtDayLabel(m.createdAt!), fg: Brand.onVariant, bg: Brand.surfaceMid),
                               ),
                             _bubble(m, m.authorId == me?.id),
                           ]);
@@ -669,46 +805,46 @@ class _ChatThreadState extends State<ChatThread> {
             margin: EdgeInsets.only(bottom: 6, left: mine ? 48 : 0, right: mine ? 0 : 48),
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
             decoration: BoxDecoration(
-              color: m.isDeleted ? TF.sunken : (mine ? TF.primary : TF.surface),
+              color: m.isDeleted ? Brand.surfaceLow : (mine ? Brand.navy : Colors.white),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(16),
                 topRight: const Radius.circular(16),
                 bottomLeft: Radius.circular(mine ? 16 : 4),
                 bottomRight: Radius.circular(mine ? 4 : 16),
               ),
-              border: mine ? null : Border.all(color: TF.line),
+              border: mine && !m.isDeleted ? null : Border.all(color: Brand.outline),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (isGroup && !mine)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(displayName(m.authorName), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: TF.violet)),
+                  child: Text(displayName(m.authorName), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Brand.onVariant)),
                 ),
               if (parent != null)
                 Container(
                   margin: const EdgeInsets.only(bottom: 6),
                   padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                   decoration: BoxDecoration(
-                    color: mine ? Colors.white.withValues(alpha: 0.15) : TF.paper,
+                    color: mine ? Colors.white.withValues(alpha: 0.10) : Brand.surfaceLow,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border(left: BorderSide(color: mine ? Colors.white70 : TF.primary, width: 3)),
+                    border: Border(left: BorderSide(color: mine ? Brand.lime : Brand.limeDim, width: 3)),
                   ),
                   child: Text(
                     '${displayName(parent.authorName)}: ${decodeMentionsForDisplay(parent.body ?? '')}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: mine ? Colors.white70 : TF.muted),
+                    style: TextStyle(fontSize: 11.5, color: mine ? Colors.white70 : TF.muted),
                   ),
                 ),
               if (m.isDeleted)
-                const Text('Message deleted', style: TextStyle(fontStyle: FontStyle.italic, color: TF.muted))
+                const Text('Message deleted', style: TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic, color: Brand.onVariant))
               else ...[
                 if ((m.body ?? '').isNotEmpty)
                   RichBody(
                     m.body!,
                     onLink: _onLink,
-                    linkColor: mine ? Colors.white : TF.primary,
-                    style: TextStyle(fontSize: 14.5, height: 1.4, color: mine ? Colors.white : TF.ink),
+                    linkColor: mine ? Brand.lime : Brand.navy,
+                    style: TextStyle(fontSize: 13, height: 1.4, color: mine ? Colors.white : Brand.navy),
                   ),
                 for (final a in m.attachments)
                   Padding(padding: const EdgeInsets.only(top: 6), child: SizedBox(width: 260, child: AttachmentTile(attachment: a, compact: true))),
@@ -717,7 +853,7 @@ class _ChatThreadState extends State<ChatThread> {
               Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(
                   '${fmtTime(m.createdAt)}${m.edited && !m.isDeleted ? ' · edited' : ''}',
-                  style: TextStyle(fontSize: 10.5, color: mine && !m.isDeleted ? Colors.white70 : TF.faint),
+                  style: TextStyle(fontSize: 10.5, color: mine && !m.isDeleted ? Colors.white.withValues(alpha: 0.6) : TF.faint),
                 ),
               ]),
               if (m.reactions.isNotEmpty)
@@ -731,11 +867,11 @@ class _ChatThreadState extends State<ChatThread> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: r.mine ? TF.amberSoft : Colors.white,
+                            color: r.mine ? Brand.limeLight : Colors.white,
                             borderRadius: BorderRadius.circular(99),
-                            border: Border.all(color: TF.line),
+                            border: Border.all(color: r.mine ? Brand.limeDim : Brand.outline),
                           ),
-                          child: Text('${r.emoji} ${r.count}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TF.ink)),
+                          child: Text('${r.emoji} ${r.count}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Brand.navy)),
                         ),
                       ),
                   ]),
@@ -755,8 +891,8 @@ class _ChatThreadState extends State<ChatThread> {
         : members.where((m) => m.name.toLowerCase().contains(mention.group(1)!.toLowerCase())).take(6).toList();
 
     return Container(
-      decoration: const BoxDecoration(color: TF.surface, border: Border(top: BorderSide(color: TF.line))),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Brand.outline))),
+      padding: const EdgeInsets.fromLTRB(8, 8, 10, 10),
       child: SafeArea(
         top: false,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -791,7 +927,13 @@ class _ChatThreadState extends State<ChatThread> {
               setState(() => pending.remove(p));
             }),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            IconButton(key: const Key('chat-attach'), tooltip: 'Attach', onPressed: conv == null ? null : _attach, icon: const Icon(Icons.add_circle_outline_rounded)),
+            IconButton(
+              key: const Key('chat-attach'),
+              tooltip: 'Attach',
+              color: Brand.navy,
+              onPressed: conv == null ? null : _attach,
+              icon: const Icon(Icons.add_circle_outline_rounded),
+            ),
             Expanded(
               child: TextField(
                 key: const Key('chat-input'),
@@ -799,13 +941,27 @@ class _ChatThreadState extends State<ChatThread> {
                 minLines: 1,
                 maxLines: 5,
                 onChanged: _onTyping,
-                decoration: const InputDecoration(hintText: 'Message…'),
+                style: const TextStyle(fontSize: 13, color: Brand.navy),
+                decoration: InputDecoration(
+                  hintText: 'Message…',
+                  fillColor: Brand.surfaceLow,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Brand.outline)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Brand.outline)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: const BorderSide(color: Brand.navy, width: 1.4)),
+                ),
               ),
             ),
             const SizedBox(width: 6),
             IconButton.filled(
               key: const Key('chat-send'),
-              style: IconButton.styleFrom(backgroundColor: TF.primary, minimumSize: const Size(46, 46)),
+              style: IconButton.styleFrom(
+                backgroundColor: Brand.navy,
+                foregroundColor: Brand.lime,
+                disabledBackgroundColor: Brand.surfaceMid,
+                disabledForegroundColor: TF.faint,
+                minimumSize: const Size(46, 46),
+              ),
               onPressed: busy || conv == null || (input.text.trim().isEmpty && pending.isEmpty && attached == null) ? null : () => _send(),
               icon: const Icon(Icons.send_rounded, size: 20),
             ),
@@ -819,11 +975,11 @@ class _ChatThreadState extends State<ChatThread> {
         key: key,
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.fromLTRB(10, 4, 2, 4),
-        decoration: BoxDecoration(color: TF.primarySoft, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: Brand.limeLight, borderRadius: BorderRadius.circular(10), border: Border.all(color: Brand.limeDim)),
         child: Row(children: [
-          Icon(icon, size: 16, color: TF.primaryDeep),
+          Icon(icon, size: 16, color: Brand.navy),
           const SizedBox(width: 6),
-          Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: TF.primaryDeep))),
+          Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Brand.navy))),
           IconButton(visualDensity: VisualDensity.compact, icon: const Icon(Icons.close_rounded, size: 17), onPressed: onRemove),
         ]),
       );
