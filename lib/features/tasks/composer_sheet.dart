@@ -336,11 +336,53 @@ class _ComposerSheetState extends State<ComposerSheet> {
 
     return Scaffold(
       backgroundColor: Brand.surface,
+      // Create stays pinned at the bottom of the screen while the form scrolls.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 10),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          decoration: BoxDecoration(
+            color: Brand.surface,
+            border: Border(top: BorderSide(color: Brand.outline.withValues(alpha: 0.7))),
+          ),
+          // heightFactor keeps the bar as tall as the button (PageBody would fill the screen).
+          child: Align(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: FilledButton(
+                key: const Key('composer-submit'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Brand.lime,
+                  disabledBackgroundColor: Brand.lime.withValues(alpha: 0.55),
+                  foregroundColor: Brand.navy,
+                  disabledForegroundColor: Brand.navy,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: Brand.navy, width: 1.5),
+                  ),
+                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                ),
+                onPressed: busy ? null : _submit,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(child: Text(submitLabel, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    if (!busy) ...[const SizedBox(width: 6), const Icon(Icons.arrow_forward_rounded, size: 18)],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
         bottom: false,
         // Not lazy: the form is short, and every field must exist for autofill and scrolling to it.
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           child: PageBody(
             maxWidth: 720,
             child: Column(
@@ -358,9 +400,6 @@ class _ComposerSheetState extends State<ComposerSheet> {
                       due == null ? 'No due date' : 'Due ${fmtDateTime(due)}',
                       '${titleCase(priority)} priority',
                     ].join(' · '),
-                    submitLabel: submitLabel,
-                    busy: busy,
-                    onSubmit: _submit,
                     segments: isSubtask
                         ? null
                         : HeroSegments(
@@ -414,7 +453,9 @@ class _ComposerSheetState extends State<ComposerSheet> {
                       minLines: 3,
                       maxLines: 8,
                       style: const TextStyle(fontSize: 13, color: Brand.navy, height: 1.4),
-                      decoration: _fieldDecoration('Add context, prerequisites or acceptance criteria… Links: [label](https://example.com)'),
+                      decoration: _fieldDecoration(
+                        'Add context, prerequisites or acceptance criteria… Links: [label](https://example.com)',
+                      ),
                     ),
                   ],
                 ),
@@ -455,7 +496,9 @@ class _ComposerSheetState extends State<ComposerSheet> {
                         key: const Key('composer-type'),
                         tinted: false,
                         leading: const Icon(Icons.terminal_rounded, size: 19, color: Brand.navy),
-                        label: loadingTypes ? 'Loading…' : selectedType?.name ?? (taskTypes.isEmpty ? 'No task types' : 'Choose task type (optional)'),
+                        label: loadingTypes
+                            ? 'Loading…'
+                            : selectedType?.name ?? (taskTypes.isEmpty ? 'No task types' : 'Choose task type (optional)'),
                         trailing: selectedType?.teamName,
                         placeholder: selectedType == null,
                         onTap: taskTypes.isEmpty
@@ -480,7 +523,8 @@ class _ComposerSheetState extends State<ComposerSheet> {
                             fg: Color(0xFF8A5A0B),
                             bg: TF.amberSoft,
                             icon: Icons.info_outline_rounded,
-                            text: 'This team has no task types yet. A Head/Admin can add them from Admin. The task can still be created without a type.',
+                            text:
+                                'This team has no task types yet. A Head/Admin can add them from Admin. The task can still be created without a type.',
                           ),
                         ),
                     ],
@@ -516,11 +560,7 @@ class _ComposerSheetState extends State<ComposerSheet> {
                       runSpacing: 8,
                       children: [
                         for (final q in const [('eod', 'Today EOD'), ('tomorrow', 'Tomorrow noon'), ('2d', '+2 days')])
-                          _QuickChip(
-                            label: q.$2,
-                            selected: due == quickTime(q.$1),
-                            onTap: () => setState(() => due = quickTime(q.$1)),
-                          ),
+                          _QuickChip(label: q.$2, selected: due == quickTime(q.$1), onTap: () => setState(() => due = quickTime(q.$1))),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -844,30 +884,6 @@ class _ComposerSheetState extends State<ComposerSheet> {
                   const SizedBox(height: 14),
                   InfoBanner(text: error!, fg: brandRedInk, bg: brandRedSoft, icon: Icons.error_outline_rounded),
                 ],
-                const SizedBox(height: 18),
-                // Second Create at the end of the form so it is reachable without scrolling back up.
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Brand.lime,
-                    disabledBackgroundColor: Brand.lime.withValues(alpha: 0.55),
-                    foregroundColor: Brand.navy,
-                    disabledForegroundColor: Brand.navy,
-                    minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      side: const BorderSide(color: Brand.navy, width: 1.5),
-                    ),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-                  ),
-                  onPressed: busy ? null : _submit,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(child: Text(submitLabel, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      if (!busy) ...[const SizedBox(width: 6), const Icon(Icons.arrow_forward_rounded, size: 18)],
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -907,11 +923,15 @@ const _limeField = Color(0xFFF7F9EC);
 const _limeLine = Color(0xFFE4F0A6);
 const _labelInk = Color(0xFF1E293B);
 
-/// Lime-tinted input with a thin lime border; navy when focused.
-InputDecoration _fieldDecoration(String hint, {Color fill = _limeField}) {
+// Inputs and dropdowns: plain white with a grey border (no lime tint).
+const _fieldFill = Colors.white;
+const _fieldLine = Color(0xFFE3E6EF);
+
+/// White input with a thin grey border; navy when focused.
+InputDecoration _fieldDecoration(String hint, {Color fill = _fieldFill}) {
   final border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(14),
-    borderSide: const BorderSide(color: _limeLine, width: 1.2),
+    borderSide: const BorderSide(color: _fieldLine, width: 1.2),
   );
   return InputDecoration(
     hintText: hint,
@@ -930,23 +950,12 @@ InputDecoration _fieldDecoration(String hint, {Color fill = _limeField}) {
   );
 }
 
-/// Navy hero: back · eyebrow/title · Create, a summary of the current choices, then the mode toggle.
+/// Navy hero: back · eyebrow/title, a summary of the current choices, then the mode toggle.
 class _Hero extends StatelessWidget {
-  const _Hero({
-    required this.eyebrow,
-    required this.title,
-    required this.summary,
-    required this.submitLabel,
-    required this.busy,
-    required this.onSubmit,
-    this.segments,
-  });
+  const _Hero({required this.eyebrow, required this.title, required this.summary, this.segments});
   final String eyebrow;
   final String title;
   final String summary;
-  final String submitLabel;
-  final bool busy;
-  final VoidCallback onSubmit;
   final Widget? segments;
 
   @override
@@ -967,33 +976,7 @@ class _Hero extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  HeroEyebrow(eyebrow),
-                  const SizedBox(height: 2),
-                  HeroTitle(title, maxLines: 1),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            FilledButton(
-              key: const Key('composer-submit'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Brand.lime,
-                disabledBackgroundColor: Brand.lime.withValues(alpha: 0.55),
-                foregroundColor: Brand.navy,
-                disabledForegroundColor: Brand.navy,
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
-              ),
-              onPressed: busy ? null : onSubmit,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(submitLabel),
-                  if (!busy) ...[const SizedBox(width: 6), const Icon(Icons.arrow_forward_rounded, size: 18)],
-                ],
+                children: [HeroEyebrow(eyebrow), const SizedBox(height: 2), HeroTitle(title, maxLines: 1)],
               ),
             ),
           ],
@@ -1007,10 +990,7 @@ class _Hero extends StatelessWidget {
             style: TextStyle(fontSize: 12, height: 1.35, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.72)),
           ),
         ),
-        if (segments != null) ...[
-          const SizedBox(height: 14),
-          Padding(padding: const EdgeInsets.only(left: 6), child: segments),
-        ],
+        if (segments != null) ...[const SizedBox(height: 14), Padding(padding: const EdgeInsets.only(left: 6), child: segments)],
       ],
     ),
   );
@@ -1113,7 +1093,7 @@ class _LimePill extends StatelessWidget {
   );
 }
 
-/// Tappable dropdown row: lime-tinted (default) or white outlined.
+/// Tappable dropdown row: white with a grey border (default) or grey filled.
 class _PickerRow extends StatelessWidget {
   const _PickerRow({
     super.key,
@@ -1135,10 +1115,10 @@ class _PickerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
-      side: BorderSide(color: tinted ? _limeLine : Brand.outline, width: 1.2),
+      side: BorderSide(color: tinted ? _fieldLine : Brand.outline, width: 1.2),
     );
     return Material(
-      color: tinted ? _limeField : Brand.surface,
+      color: tinted ? _fieldFill : Brand.surface,
       shape: shape,
       child: InkWell(
         customBorder: shape,
@@ -1161,10 +1141,7 @@ class _PickerRow extends StatelessWidget {
                   ),
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                Flexible(child: _LimePill(trailing!)),
-              ],
+              if (trailing != null) ...[const SizedBox(width: 8), Flexible(child: _LimePill(trailing!))],
               const SizedBox(width: 6),
               Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: onTap == null ? const Color(0xFF94A3B8) : Brand.navy),
             ],
@@ -1285,7 +1262,11 @@ class _QuickChip extends StatelessWidget {
             if (selected) ...[const Icon(Icons.event_available_rounded, size: 17, color: Brand.lime), const SizedBox(width: 6)],
             Text(
               label,
-              style: TextStyle(fontSize: 12.5, fontWeight: selected ? FontWeight.w700 : FontWeight.w600, color: selected ? Brand.lime : Brand.navy),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? Brand.lime : Brand.navy,
+              ),
             ),
           ],
         ),

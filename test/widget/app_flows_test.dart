@@ -93,6 +93,20 @@ void main() {
       });
     }
 
+    testWidgets('Recently done · See all opens Tasks filtered to Done', (t) async {
+      final b = FakeBackend();
+      b.tasks.add(taskRow(9, 'Closed quarter books', status: 'DONE', assigneeId: 1, assigneeName: 'Me'));
+      await bootApp(t, b);
+      await reveal(t, find.byKey(const ValueKey('see-all-Recently done')));
+      await tapOn(t, find.byKey(const ValueKey('see-all-Recently done')));
+      final q = b.last('GET', '/tasks').query;
+      expect(q['filter'], 'mine');
+      expect(q['status'], 'DONE');
+      expect(find.textContaining('Status: Done'), findsOneWidget);
+      expect(find.text('Closed quarter books'), findsWidgets);
+      await teardownApp(t);
+    });
+
     testWidgets('Accept + ETA flow from dashboard', (t) async {
       final b = FakeBackend();
       await bootApp(t, b);

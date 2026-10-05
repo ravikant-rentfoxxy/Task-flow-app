@@ -9,11 +9,11 @@ import '../../data/taskflow_api.dart';
 import '../../models/models.dart';
 import '../../state/realtime_controller.dart';
 import '../../state/auth_controller.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/filters.dart';
 import '../chat/chat_screen.dart';
 import '../scribble/scribble_screen.dart';
+import '../shell/home_shell.dart';
 import '../shell/top_bar.dart';
 import '../tasks/composer_sheet.dart';
 import '../tasks/status_sheet.dart';
@@ -141,135 +141,179 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final urgent = needsAck.length + escalated.length;
 
     return Scaffold(
-      backgroundColor: Brand.surface,
-      appBar: const BrandTopBar(subtitle: 'Dashboard'),
-      floatingActionButton: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(99),
-          boxShadow: [BoxShadow(color: Brand.lime.withValues(alpha: 0.5), blurRadius: 14, offset: const Offset(0, 4))],
-        ),
-        child: FloatingActionButton.extended(
-          key: const Key('dashboard-new-task'),
-          heroTag: 'dashboard-new-task',
-          onPressed: () async {
-            if (await showComposer(context) != null) _load();
-          },
-          backgroundColor: Brand.lime,
-          foregroundColor: Brand.navy,
-          elevation: 0,
-          highlightElevation: 0,
-          shape: const StadiumBorder(side: BorderSide(color: Brand.navy, width: 2)),
-          icon: const Icon(Icons.add_rounded, size: 24),
-          label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-        ),
+      backgroundColor: _page,
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('dashboard-new-task'),
+        heroTag: 'dashboard-new-task',
+        onPressed: () async {
+          if (await showComposer(context) != null) _load();
+        },
+        backgroundColor: _lime,
+        foregroundColor: _ink,
+        elevation: 0,
+        highlightElevation: 0,
+        shape: const StadiumBorder(side: BorderSide(color: _ink, width: 2)),
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
       ),
-      body: RefreshIndicator(
-        color: Brand.navy,
-        backgroundColor: Brand.lime,
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 104),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
           children: [
-            PageBody(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Hero(
-                    greeting: '${greetingFor(now)}${me == null ? '' : ', ${firstName(me.name)}'}',
-                    date: fmtDayDate(now),
-                    live: live,
-                    urgent: mine == null ? null : urgent,
-                    loading: loading,
-                    updatedAt: updatedAt,
-                    due: due,
-                    onDue: (d) => _setFilter(() => due = d),
-                    onUrgentTap: urgent == 0 ? null : () => _jumpTo(needsAck.isNotEmpty ? _acceptKey : _escalatedKey),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (canFilter)
-                        _SoftChip(
-                          key: const Key('dashboard-filter'),
-                          icon: Icons.person_search_outlined,
-                          label: userOrTeamLabel(assigneeFilter, users, teams, empty: 'Everyone (my dashboard)'),
-                          active: viewingFiltered,
-                          onTap: () async {
-                            final v = await pickUserOrTeam(
-                              context,
-                              users: users,
-                              teams: teams,
-                              selected: assigneeFilter,
-                              emptyLabel: 'Everyone (my dashboard)',
-                            );
-                            if (v != null) _setFilter(() => assigneeFilter = v);
-                          },
-                        ),
-                      _SoftChip(
-                        icon: Icons.gesture_rounded,
-                        label: 'Scribble',
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScribbleScreen())),
-                      ),
-                    ],
-                  ),
-                  if (canFilter && online.isNotEmpty) ...[const SizedBox(height: 10), _OnlineStrip(users: online)],
-                  const SizedBox(height: 14),
-                  if (mine == null && error == null)
-                    const SkeletonList(count: 3)
-                  else if (error != null && mine == null)
-                    ErrorView(message: error!, onRetry: _load)
-                  else ...[
-                    _Metrics(
-                      total: list.length,
-                      tiles: [
-                        _MetricData(const Key('metric-accept'), 'To accept', Icons.timer_outlined, needsAck.length, Brand.lime, Brand.navy,
-                            () => _jumpTo(_acceptKey)),
-                        _MetricData(const Key('metric-escalated'), 'Escalated', Icons.warning_amber_rounded, escalated.length, _red,
-                            Colors.white, () => _jumpTo(_escalatedKey), hot: escalated.isNotEmpty),
-                        _MetricData(const Key('metric-progress'), 'In progress', Icons.cached_rounded, inProgress.length, Brand.navy,
-                            Brand.lime, () => _jumpTo(otherProgress.isNotEmpty ? _progressKey : _todayKey)),
-                        _MetricData(const Key('metric-today'), 'Due today', Icons.calendar_today_rounded, dueToday.length, Brand.surfaceMid,
-                            Brand.navy, () => _jumpTo(_todayKey)),
-                      ],
-                    ),
-                    const SizedBox(height: 22),
-                    _section('To Accept', '30-min SLA', needsAck, key: _acceptKey, actions: (t) => _acceptActions(t, me)),
-                    if (escalated.isNotEmpty)
-                      _EscalatedPanel(key: _escalatedKey, tasks: escalated, me: me, onChanged: _load),
-                    _section('Due Today', null, dueToday, key: _todayKey),
-                    _section('In Progress', null, otherProgress, key: _progressKey),
-                    _section('Assigned by Me', 'open', createdOpen),
-                    _section('Recently Done', null, done),
-                    if (list.isEmpty && created.isEmpty && done.isEmpty)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Brand.outline),
-                        ),
-                        child: EmptyState(
-                          icon: Icons.check_circle_outline_rounded,
-                          color: Brand.navy,
-                          title: viewingFiltered ? 'No matching tasks' : 'All clear',
-                          message: viewingFiltered
-                              ? 'Try another person or team.'
-                              : 'Nothing on your plate. Create a task or sketch one on the board.',
-                          action: viewingFiltered
-                              ? null
-                              : FilledButton.icon(
-                                  style: FilledButton.styleFrom(backgroundColor: Brand.lime, foregroundColor: Brand.navy),
-                                  onPressed: () async {
-                                    if (await showComposer(context) != null) _load();
-                                  },
-                                  icon: const Icon(Icons.add_rounded),
-                                  label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w700)),
+            const PageBody(child: _HomeHeader()),
+            Expanded(
+              child: RefreshIndicator(
+                color: _ink,
+                backgroundColor: _lime,
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 88),
+                  children: [
+                    PageBody(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _Hero(
+                            greeting: greetingFor(now),
+                            name: me == null ? '' : displayName(me.name),
+                            date: fmtDayDate(now),
+                            live: live,
+                            urgent: mine == null ? null : urgent,
+                            loading: loading,
+                            updatedAt: updatedAt,
+                            onUrgentTap: urgent == 0 ? null : () => _jumpTo(needsAck.isNotEmpty ? _acceptKey : _escalatedKey),
+                          ),
+                          const SizedBox(height: 12),
+                          if (mine == null && error == null)
+                            const SkeletonList(count: 3)
+                          else if (error != null && mine == null)
+                            ErrorView(message: error!, onRetry: _load)
+                          else ...[
+                            _Metrics(
+                              tiles: [
+                                _MetricData(
+                                  const Key('metric-accept'),
+                                  'To accept',
+                                  Icons.timer_outlined,
+                                  needsAck.length,
+                                  _lime,
+                                  _ink,
+                                  () => _jumpTo(_acceptKey),
                                 ),
-                        ),
+                                _MetricData(
+                                  const Key('metric-escalated'),
+                                  'Escalated',
+                                  Icons.warning_amber_rounded,
+                                  escalated.length,
+                                  const Color(0xFFFDE8E7),
+                                  const Color(0xFFC0201B),
+                                  () => _jumpTo(_escalatedKey),
+                                  hot: escalated.isNotEmpty,
+                                ),
+                                _MetricData(
+                                  const Key('metric-progress'),
+                                  'In progress',
+                                  Icons.cached_rounded,
+                                  inProgress.length,
+                                  _ink,
+                                  _lime,
+                                  () => _jumpTo(otherProgress.isNotEmpty ? _progressKey : _todayKey),
+                                ),
+                                _MetricData(
+                                  const Key('metric-today'),
+                                  'Due today',
+                                  Icons.calendar_today_rounded,
+                                  dueToday.length,
+                                  _chip,
+                                  _ink,
+                                  () => _jumpTo(_todayKey),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _DueSegments(value: due, onChanged: (d) => _setFilter(() => due = d)),
+                              ),
+                              const SizedBox(width: 8),
+                              _SquareButton(
+                                icon: Icons.draw_outlined,
+                                tooltip: 'Scribble',
+                                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ScribbleScreen())),
+                              ),
+                            ],
+                          ),
+                          if (canFilter) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: _SoftChip(
+                                key: const Key('dashboard-filter'),
+                                icon: Icons.person_search_outlined,
+                                label: userOrTeamLabel(assigneeFilter, users, teams, empty: 'Everyone (my dashboard)'),
+                                active: viewingFiltered,
+                                onTap: () async {
+                                  final v = await pickUserOrTeam(
+                                    context,
+                                    users: users,
+                                    teams: teams,
+                                    selected: assigneeFilter,
+                                    emptyLabel: 'Everyone (my dashboard)',
+                                  );
+                                  if (v != null) _setFilter(() => assigneeFilter = v);
+                                },
+                              ),
+                            ),
+                          ],
+                          if (canFilter && online.isNotEmpty) ...[const SizedBox(height: 8), _OnlineStrip(users: online)],
+                          const SizedBox(height: 18),
+                          if (mine != null) ...[
+                            _section('To accept', '30-min SLA', needsAck, icon: (Icons.timer_outlined, _lime, _ink), key: _acceptKey, actions: (t) => _acceptActions(t, me)),
+                            if (escalated.isNotEmpty) _EscalatedPanel(key: _escalatedKey, tasks: escalated, me: me, onChanged: _load),
+                            _section('Due today', null, dueToday, icon: (Icons.today_rounded, _chip, _ink), key: _todayKey),
+                            _section('In progress', null, otherProgress, icon: (Icons.cached_rounded, _ink, _lime), key: _progressKey),
+                            _section('Assigned by me', 'open', createdOpen, icon: (Icons.assignment_ind_outlined, _chip, _ink)),
+                            _section(
+                              'Recently done',
+                              null,
+                              done,
+                              icon: (Icons.task_alt_rounded, const Color(0xFFE6F6EC), const Color(0xFF14693A)),
+                              seeAllStatus: 'DONE',
+                            ),
+                            if (list.isEmpty && created.isEmpty && done.isEmpty)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: _line),
+                                ),
+                                child: EmptyState(
+                                  icon: Icons.check_circle_outline_rounded,
+                                  color: _ink,
+                                  title: viewingFiltered ? 'No matching tasks' : 'All clear',
+                                  message: viewingFiltered
+                                      ? 'Try another person or team.'
+                                      : 'Nothing on your plate. Create a task or sketch one on the board.',
+                                  action: viewingFiltered
+                                      ? null
+                                      : FilledButton.icon(
+                                          style: FilledButton.styleFrom(backgroundColor: _lime, foregroundColor: _ink),
+                                          onPressed: () async {
+                                            if (await showComposer(context) != null) _load();
+                                          },
+                                          icon: const Icon(Icons.add_rounded),
+                                          label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w700)),
+                                        ),
+                                ),
+                              ),
+                          ],
+                        ],
                       ),
+                    ),
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -311,25 +355,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
-  Widget _section(String title, String? tag, List<Task> tasks, {Key? key, List<Widget> Function(Task)? actions}) {
+  Widget _section(
+    String title,
+    String? tag,
+    List<Task> tasks, {
+    required (IconData, Color, Color) icon,
+    Key? key,
+    List<Widget> Function(Task)? actions,
+    String? seeAllStatus,
+  }) {
     if (tasks.isEmpty) return SizedBox.shrink(key: key);
     return Padding(
       key: key,
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _SectionTitle(title: title, tag: tag, count: tasks.length),
+          _SectionTitle(
+            title: title,
+            icon: icon,
+            tag: tag,
+            count: tasks.length,
+            onSeeAll: Get.isRegistered<ShellController>()
+                ? () => seeAllStatus == null
+                      ? Get.find<ShellController>().go('tasks')
+                      : Get.find<ShellController>().openTasks(status: seeAllStatus)
+                : null,
+          ),
           TaskList(
             tasks: tasks,
             onChanged: _load,
-            cardBuilder: (t) => DashboardTaskCard(task: t, onChanged: _load, actions: actions?.call(t) ?? const []),
+            cardBuilder: (t) => HomeTaskCard(task: t, onChanged: _load, actions: actions?.call(t) ?? const []),
           ),
         ],
       ),
     );
   }
 }
+
+// Home palette (matches the Work Plus home design).
+const _page = Color(0xFFF6F7FB);
+const _ink = Color(0xFF111A2E);
+const _inkRaised = Color(0xFF1B2740);
+const _inkLine = Color(0xFF2A3652);
+const _muted = Color(0xFF6B7691);
+const _slate = Color(0xFF8F9BB5);
+const _line = Color(0xFFE3E6EF);
+const _chip = Color(0xFFEBEEF5);
+const _lime = Color(0xFFD7F83A);
 
 const _red = Color(0xFFDC2626);
 const _redSoft = Color(0xFFFEE2E2);
@@ -342,54 +415,92 @@ String fmtDayDate(DateTime d) {
   return '${days[d.weekday - 1]}, ${d.day} ${months[d.month - 1]}';
 }
 
+// ── Header ────────────────────────────────────────────────────────────────
+
+/// Logo · Work Plus / Dashboard ······ bell (white circle) · account.
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+    child: Row(
+      children: [
+        const AppLogo(size: 38),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Work Plus',
+                style: TextStyle(fontFamily: kBrandFont, fontSize: 16, fontWeight: FontWeight.w700, color: _ink, height: 1.2),
+              ),
+              Text('Dashboard', style: TextStyle(fontSize: 12, color: _muted)),
+            ],
+          ),
+        ),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: _line, width: 0.5),
+          ),
+          child: const IconTheme(
+            data: IconThemeData(color: _ink, size: 20),
+            child: Center(child: NotificationBell()),
+          ),
+        ),
+        const SizedBox(width: 6),
+        const AccountButton(),
+      ],
+    ),
+  );
+}
+
 // ── Hero ──────────────────────────────────────────────────────────────────
 
-/// Navy command card: live status, date, greeting, urgent count, sync line and
-/// the due-date filter.
+/// Navy card: live pill and date, greeting and name, then the urgent / all
+/// clear line with the sync time.
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.greeting,
+    required this.name,
     required this.date,
     required this.live,
     required this.urgent,
     required this.loading,
     required this.updatedAt,
-    required this.due,
-    required this.onDue,
     required this.onUrgentTap,
   });
   final String greeting;
+  final String name;
   final String date;
   final bool live;
   final int? urgent;
   final bool loading;
   final DateTime? updatedAt;
-  final DueFilter due;
-  final ValueChanged<DueFilter> onDue;
   final VoidCallback? onUrgentTap;
 
   @override
   Widget build(BuildContext context) => Container(
     clipBehavior: Clip.antiAlias,
-    decoration: BoxDecoration(
-      color: Brand.navy,
-      borderRadius: BorderRadius.circular(22),
-      boxShadow: [BoxShadow(color: Brand.navy.withValues(alpha: 0.10), blurRadius: 20, offset: const Offset(0, 6))],
-    ),
+    decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(24)),
     child: Stack(
       children: [
         Positioned(
-          right: -50,
-          top: -60,
-          child: _glow(170, 0.10),
-        ),
-        Positioned(
-          right: 40,
-          bottom: -70,
-          child: _glow(120, 0.06),
+          right: -40,
+          top: -50,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: const BoxDecoration(color: _inkRaised, shape: BoxShape.circle),
+          ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -397,43 +508,43 @@ class _Hero extends StatelessWidget {
                 children: [
                   if (live) const _LivePill(),
                   const Spacer(),
-                  Flexible(
-                    child: Text(
-                      date.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1, color: Colors.white.withValues(alpha: 0.6)),
-                    ),
-                  ),
+                  Text(date, style: const TextStyle(fontSize: 12, letterSpacing: 0.5, color: _slate)),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                greeting,
+              const SizedBox(height: 18),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: greeting, style: const TextStyle(fontWeight: FontWeight.w400, color: _slate)),
+                    if (name.isNotEmpty) TextSpan(text: ' $name'),
+                  ],
+                ),
                 key: const Key('greeting'),
-                style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: Colors.white, height: 1.2),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white, height: 1.25),
               ),
-              const SizedBox(height: 10),
-              if (urgent != null) _UrgentRow(count: urgent!, onTap: onUrgentTap),
               const SizedBox(height: 14),
-              _DueSegments(value: due, onChanged: onDue),
-              const SizedBox(height: 8),
-              _SyncLine(loading: loading, updatedAt: updatedAt),
+              Container(height: 0.5, color: _inkLine),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: urgent == null ? const SizedBox.shrink() : _UrgentRow(count: urgent!, onTap: onUrgentTap),
+                  ),
+                  const SizedBox(width: 8),
+                  _SyncLine(loading: loading, updatedAt: updatedAt),
+                ],
+              ),
             ],
           ),
         ),
       ],
     ),
   );
-
-  static Widget _glow(double size, double alpha) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(color: Brand.lime.withValues(alpha: alpha), shape: BoxShape.circle),
-  );
 }
 
-/// Lime count bubble + "need your response", or an all-clear line.
+/// "You're all caught up", or a tappable "N tasks need your response".
 class _UrgentRow extends StatelessWidget {
   const _UrgentRow({required this.count, required this.onTap});
   final int count;
@@ -441,61 +552,30 @@ class _UrgentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (count == 0) {
-      return Row(
+    final label = count == 0 ? "You're all caught up" : '$count ${count == 1 ? 'task needs' : 'tasks need'} your response';
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Row(
         children: [
-          const Icon(Icons.check_circle_rounded, size: 18, color: Brand.lime),
-          const SizedBox(width: 8),
-          Expanded(
+          Icon(count == 0 ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded, size: 18, color: _lime),
+          const SizedBox(width: 6),
+          Flexible(
             child: Text(
-              "You're all caught up",
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.8)),
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, color: _lime),
             ),
           ),
+          if (count > 0) ...[const SizedBox(width: 4), const Icon(Icons.arrow_forward_rounded, size: 16, color: _lime)],
         ],
-      );
-    }
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              constraints: const BoxConstraints(minWidth: 34),
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: Brand.lime, borderRadius: BorderRadius.circular(10)),
-              child: Text(
-                '$count',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Brand.navy),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                count == 1 ? 'task needs your response' : 'tasks need your response',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-            const Icon(Icons.arrow_forward_rounded, size: 18, color: Brand.lime),
-          ],
-        ),
       ),
     );
   }
 }
 
-/// "Updated just now" with a spinning sync icon while loading (on navy).
+/// "Just now" / "5m ago" with a spinning sync icon while loading (on navy).
 class _SyncLine extends StatefulWidget {
   const _SyncLine({required this.loading, required this.updatedAt});
   final bool loading;
@@ -540,23 +620,16 @@ class _SyncLineState extends State<_SyncLine> with SingleTickerProviderStateMixi
         ? 'Syncing…'
         : widget.updatedAt == null
         ? ''
-        : 'Updated ${timeAgo(widget.updatedAt)}';
-    final color = Colors.white.withValues(alpha: 0.55);
+        : (DateTime.now().difference(widget.updatedAt!).inSeconds < 60 ? 'Just now' : timeAgo(widget.updatedAt));
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         RotationTransition(
           turns: _spin,
-          child: Icon(Icons.sync_rounded, size: 13, color: color),
+          child: const Icon(Icons.sync_rounded, size: 13, color: _slate),
         ),
-        const SizedBox(width: 5),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500, color: color),
-          ),
-        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: _slate)),
       ],
     );
   }
@@ -567,27 +640,29 @@ class _LivePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-    decoration: BoxDecoration(color: Brand.lime, borderRadius: BorderRadius.circular(99)),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+    decoration: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(99)),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 6,
           height: 6,
-          decoration: const BoxDecoration(color: Brand.navy, shape: BoxShape.circle),
+          decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
         const Text(
           'LIVE',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1, color: Brand.navy),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _ink),
         ),
       ],
     ),
   );
 }
 
-/// Segmented due filter on navy: any · today · custom range (lime selected).
+// ── Filters ───────────────────────────────────────────────────────────────
+
+/// White segmented due filter: any date · today · custom range (lime selected).
 class _DueSegments extends StatelessWidget {
   const _DueSegments({required this.value, required this.onChanged});
   final DueFilter value;
@@ -597,6 +672,8 @@ class _DueSegments extends StatelessWidget {
     final now = DateTime.now();
     final r = await showDateRangePicker(
       context: context,
+      // Calendar only: hides the pencil that switches to typing dates.
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
       firstDate: DateTime(now.year - 2),
       lastDate: DateTime(now.year + 3),
       initialDateRange: value.from != null && value.to != null ? DateTimeRange(start: value.from!, end: value.to!) : null,
@@ -608,27 +685,32 @@ class _DueSegments extends StatelessWidget {
   Widget build(BuildContext context) {
     final rangeLabel = value.mode == 'range' && value.from != null && value.to != null
         ? '${fmtShortDate(value.from)} – ${fmtShortDate(value.to)}'
-        : 'Custom range';
-    Widget seg(String key, String label, bool selected, VoidCallback onTap) => Expanded(
+        : 'Custom';
+    Widget seg(String key, IconData icon, String label, bool selected, VoidCallback onTap) => Expanded(
       child: GestureDetector(
         key: Key(key),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          height: 32,
+          height: 36,
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          decoration: BoxDecoration(color: selected ? Brand.lime : Colors.transparent, borderRadius: BorderRadius.circular(9)),
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              color: selected ? Brand.navy : Colors.white.withValues(alpha: 0.75),
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(color: selected ? _lime : Colors.transparent, borderRadius: BorderRadius.circular(11)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: selected ? _ink : _muted),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, fontWeight: selected ? FontWeight.w600 : FontWeight.w400, color: selected ? _ink : _muted),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -636,22 +718,45 @@ class _DueSegments extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _line, width: 0.5),
       ),
       child: Row(
         children: [
-          seg('due-all', 'Any due date', value.mode == 'all', () => onChanged(const DueFilter())),
-          seg('due-today', 'Due today', value.mode == 'today', () => onChanged(const DueFilter(mode: 'today'))),
-          seg('due-range', rangeLabel, value.mode == 'range', () => _pickRange(context)),
+          seg('due-all', Icons.all_inclusive_rounded, 'Any date', value.mode == 'all', () => onChanged(const DueFilter())),
+          seg('due-today', Icons.today_rounded, 'Today', value.mode == 'today', () => onChanged(const DueFilter(mode: 'today'))),
+          seg('due-range', Icons.date_range_rounded, rangeLabel, value.mode == 'range', () => _pickRange(context)),
         ],
       ),
     );
   }
 }
 
-// ── Filters ───────────────────────────────────────────────────────────────
+/// 46×44 white rounded icon button that sits beside the due filter.
+class _SquareButton extends StatelessWidget {
+  const _SquareButton({required this.icon, required this.tooltip, required this.onTap});
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: _line, width: 0.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(width: 46, height: 44, child: Icon(icon, size: 20, color: _ink)),
+      ),
+    ),
+  );
+}
 
 class _SoftChip extends StatelessWidget {
   const _SoftChip({super.key, required this.icon, required this.label, required this.onTap, this.active = false});
@@ -662,23 +767,23 @@ class _SoftChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: active ? Brand.limeLight : Colors.white,
-    shape: StadiumBorder(side: BorderSide(color: active ? Brand.limeDim : Brand.outline)),
+    color: active ? _lime : Colors.white,
+    shape: const StadiumBorder(side: BorderSide(color: _line, width: 0.5)),
     child: InkWell(
       customBorder: const StadiumBorder(),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: active ? Brand.navy : Brand.onVariant),
+            Icon(icon, size: 15, color: active ? _ink : _muted),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, fontWeight: active ? FontWeight.w700 : FontWeight.w600, color: Brand.navy),
+                style: TextStyle(fontSize: 12, fontWeight: active ? FontWeight.w600 : FontWeight.w500, color: _ink),
               ),
             ),
           ],
@@ -702,79 +807,72 @@ class _MetricData {
   final bool hot;
 }
 
-/// One slim row of four tappable counters (2×2 on very narrow screens).
+/// 2×2 grid of tappable counters (one row of four on wide screens).
 class _Metrics extends StatelessWidget {
-  const _Metrics({required this.total, required this.tiles});
-  final int total;
+  const _Metrics({required this.tiles});
   final List<_MetricData> tiles;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, c) {
-      final cols = c.maxWidth < 300 ? 2 : 4;
-      final w = (c.maxWidth - (cols - 1) * 8) / cols;
+      final cols = c.maxWidth >= 680 ? 4 : 2;
+      final w = (c.maxWidth - (cols - 1) * 10) / cols;
       return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [for (final t in tiles) SizedBox(width: w, child: _MetricTile(data: t, total: total))],
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (final t in tiles)
+            SizedBox(
+              width: w,
+              child: _MetricTile(data: t),
+            ),
+        ],
       );
     },
   );
 }
 
 class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.data, required this.total});
+  const _MetricTile({required this.data});
   final _MetricData data;
-  final int total;
 
   @override
   Widget build(BuildContext context) => Material(
     key: data.key,
     color: Colors.white,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
-      side: BorderSide(color: data.hot ? _red.withValues(alpha: 0.3) : Brand.outline),
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: data.hot ? _red.withValues(alpha: 0.3) : _line, width: data.hot ? 1 : 0.5),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: data.value == 0 ? null : data.onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(12),
+        child: Row(
           children: [
             Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(color: data.iconBg, borderRadius: BorderRadius.circular(8)),
-              child: Icon(data.icon, size: 15, color: data.iconFg),
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(color: data.iconBg, borderRadius: BorderRadius.circular(10)),
+              child: Icon(data.icon, size: 18, color: data.iconFg),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${data.value}',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                height: 1,
-                letterSpacing: -0.6,
-                color: data.hot ? _red : Brand.navy,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              data.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Brand.onVariant),
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: total == 0 ? 0 : data.value / total,
-                minHeight: 3,
-                color: data.hot ? _red : (data.iconBg == Brand.surfaceMid ? Brand.navy : (data.iconBg == Brand.navy ? Brand.lime : data.iconBg)),
-                backgroundColor: Brand.surfaceMid,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${data.value}',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.2, color: data.hot ? _red : _ink),
+                  ),
+                  Text(
+                    data.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: _muted),
+                  ),
+                ],
               ),
             ),
           ],
@@ -786,64 +884,76 @@ class _MetricTile extends StatelessWidget {
 
 // ── Sections ──────────────────────────────────────────────────────────────
 
-/// Lime accent bar · title · optional lime tag ······ navy count bubble.
+/// Icon badge · title · navy count bubble · optional tag ······ See all.
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.count, this.tag});
+  const _SectionTitle({required this.title, required this.icon, required this.count, this.tag, this.onSeeAll});
   final String title;
+
+  /// (icon, badge background, icon colour) — same pairing as the metric tiles.
+  final (IconData, Color, Color) icon;
   final int count;
   final String? tag;
+  final VoidCallback? onSeeAll;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
     child: Row(
       children: [
         Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(color: Brand.lime, borderRadius: BorderRadius.circular(2)),
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(color: icon.$2, borderRadius: BorderRadius.circular(9)),
+          child: Icon(icon.$1, size: 16, color: icon.$3),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 9),
+        // Expanded takes all free space so "See all" always sits at the right edge.
         Expanded(
           child: Row(
             children: [
               Flexible(
                 child: Text(
                   title,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: -0.2, color: Brand.navy),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(99)),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _lime),
                 ),
               ),
               if (tag != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Brand.limeLight,
-                    borderRadius: BorderRadius.circular(99),
-                    border: Border.all(color: Brand.limeDim),
-                  ),
+                  decoration: BoxDecoration(color: _chip, borderRadius: BorderRadius.circular(99)),
                   child: Text(
                     tag!,
-                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Brand.navy),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _ink),
                   ),
                 ),
               ],
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        Container(
-          constraints: const BoxConstraints(minWidth: 24),
-          height: 22,
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: Brand.navy, borderRadius: BorderRadius.circular(99)),
-          child: Text(
-            '$count',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Brand.lime),
+        if (onSeeAll != null) ...[
+          const SizedBox(width: 8),
+          InkWell(
+            key: ValueKey('see-all-$title'),
+            borderRadius: BorderRadius.circular(6),
+            onTap: onSeeAll,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Text('See all', style: TextStyle(fontSize: 12, color: _muted)),
+            ),
           ),
-        ),
+        ],
       ],
     ),
   );
@@ -860,15 +970,12 @@ class _DashButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FilledButton.icon(
     style: FilledButton.styleFrom(
-      backgroundColor: primary ? Brand.lime : Brand.surfaceLow,
-      foregroundColor: Brand.navy,
+      backgroundColor: primary ? _lime : _chip,
+      foregroundColor: _ink,
       elevation: 0,
       minimumSize: const Size(0, 38),
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: primary ? BorderSide.none : BorderSide(color: Brand.outline.withValues(alpha: 0.8)),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide.none),
       textStyle: TextStyle(fontSize: 12.5, fontWeight: primary ? FontWeight.w800 : FontWeight.w600),
     ),
     onPressed: onPressed,
@@ -891,7 +998,7 @@ class _EscalatedPanel extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
     decoration: BoxDecoration(
       color: const Color(0xFFFEF2F2),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(color: _red.withValues(alpha: 0.18)),
     ),
     child: Column(
@@ -910,7 +1017,7 @@ class _EscalatedPanel extends StatelessWidget {
               child: Text(
                 'Escalated',
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Brand.navy, letterSpacing: -0.2),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _ink, letterSpacing: -0.2),
               ),
             ),
             const SizedBox(width: 8),
@@ -960,7 +1067,10 @@ class _EscalatedItem extends StatelessWidget {
 
     return Material(
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: _red.withValues(alpha: 0.12))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _red.withValues(alpha: 0.12)),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey('task-card-${task.id}'),
@@ -989,8 +1099,7 @@ class _EscalatedItem extends StatelessWidget {
                       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _red),
                     ),
                   ),
-                  if (task.priority == 'URGENT' || task.priority == 'HIGH')
-                    DashTag(task.priority, fg: _redInk, bg: _redSoft, bold: true),
+                  if (task.priority == 'URGENT' || task.priority == 'HIGH') DashTag(task.priority, fg: _redInk, bg: _redSoft, bold: true),
                 ],
               ),
               const SizedBox(height: 4),
@@ -998,14 +1107,14 @@ class _EscalatedItem extends StatelessWidget {
                 task.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Brand.navy, height: 1.3),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _ink, height: 1.3),
               ),
               const SizedBox(height: 2),
               Text(
                 mine ? 'From ${displayName(task.creatorName)}' : 'Assigned to ${task.who}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11.5, color: Brand.onVariant),
+                style: const TextStyle(fontSize: 11.5, color: _muted),
               ),
               if (detail.isNotEmpty) ...[
                 const SizedBox(height: 6),
@@ -1013,7 +1122,7 @@ class _EscalatedItem extends StatelessWidget {
                   detail,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, height: 1.4, color: Brand.onVariant),
+                  style: const TextStyle(fontSize: 11.5, height: 1.4, color: _muted),
                 ),
               ],
               const SizedBox(height: 10),
@@ -1044,25 +1153,25 @@ class _OnlineStrip extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Brand.outline),
+      border: Border.all(color: _line),
     ),
     child: Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-          decoration: BoxDecoration(color: Brand.lime, borderRadius: BorderRadius.circular(99)),
+          decoration: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(99)),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(color: Brand.navy, shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
               ),
               const SizedBox(width: 5),
               Text(
                 '${users.length} online',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Brand.navy),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: _ink),
               ),
             ],
           ),

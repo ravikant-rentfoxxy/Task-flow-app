@@ -13,6 +13,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/brand_ui.dart';
 import '../../widgets/common.dart';
 import '../../widgets/filters.dart';
+import '../shell/home_shell.dart';
 import '../shell/top_bar.dart';
 import 'composer_sheet.dart';
 import 'task_card.dart';
@@ -41,6 +42,7 @@ class _TasksScreenState extends State<TasksScreen> {
   List<Team> teams = [];
   Timer? _debounce;
   StreamSubscription<void>? _sub;
+  Worker? _statusLink;
   final searchCtrl = TextEditingController();
 
   TaskFlowApi get api => Get.find<TaskFlowApi>();
@@ -53,14 +55,42 @@ class _TasksScreenState extends State<TasksScreen> {
       api.users().then((u) => mounted ? setState(() => users = u) : null).catchError((_) {});
       api.teams().then((t) => mounted ? setState(() => teams = t) : null).catchError((_) {});
     }
+    if (Get.isRegistered<ShellController>()) {
+      final shell = Get.find<ShellController>();
+      _takeStatusLink(shell, initial: true);
+      _statusLink = ever(shell.tasksStatus, (_) => _takeStatusLink(shell));
+    }
     _load();
     _sub = Get.find<RealtimeController>().taskChanged.listen((_) => _load(quiet: true));
+  }
+
+  /// Applies a status sent from the dashboard ("See all") on top of the
+  /// default view: my tasks, no search, person or due filter.
+  void _takeStatusLink(ShellController shell, {bool initial = false}) {
+    final s = shell.tasksStatus.value;
+    if (s == null) return;
+    shell.tasksStatus.value = null;
+    void apply() {
+      filter = 'mine';
+      status = s;
+      q = '';
+      assigneeFilter = '';
+      due = const DueFilter();
+    }
+
+    searchCtrl.clear();
+    if (initial) {
+      apply(); // initState loads right after
+    } else {
+      _update(apply);
+    }
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _sub?.cancel();
+    _statusLink?.dispose();
     super.dispose();
   }
 
@@ -133,27 +163,26 @@ class _TasksScreenState extends State<TasksScreen> {
     final border = OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Brand.outline));
 
     return Scaffold(
-      backgroundColor: Brand.surface,
+      backgroundColor: const Color(0xFFF6F7FB),
       appBar: const BrandTopBar(subtitle: 'Tasks'),
-      floatingActionButton: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(99),
-          boxShadow: [BoxShadow(color: Brand.lime.withValues(alpha: 0.5), blurRadius: 14, offset: const Offset(0, 4))],
-        ),
-        child: FloatingActionButton.extended(
+      // Round dark button with a lime "+".
+      floatingActionButton: SizedBox(
+        width: 54,
+        height: 54,
+        child: FloatingActionButton(
           key: const Key('new-task-fab'),
           heroTag: 'new-task-fab',
+          tooltip: 'New task',
           onPressed: () async {
             final ids = await showComposer(context);
             if (ids != null) _load();
           },
-          backgroundColor: Brand.lime,
-          foregroundColor: Brand.navy,
+          backgroundColor: const Color(0xFF111A2E),
+          foregroundColor: const Color(0xFFD7F83A),
           elevation: 0,
           highlightElevation: 0,
-          shape: const StadiumBorder(side: BorderSide(color: Brand.navy, width: 2)),
-          icon: const Icon(Icons.add_rounded, size: 26),
-          label: const Text('New task', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+          shape: const CircleBorder(),
+          child: const _BoldPlus(size: 22, stroke: 3.2, color: Color(0xFFD7F83A)),
         ),
       ),
       body: RefreshIndicator(
@@ -618,4 +647,36 @@ class _FilterPill<T> extends StatelessWidget {
       child: pill,
     );
   }
+}
+
+/// "+" drawn with rounded strokes so its weight can be set (icon fonts can't).
+class _BoldPlus extends StatelessWidget {
+  const _BoldPlus({required this.size, required this.stroke, required this.color});
+  final double size;
+  final double stroke;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _PlusPainter(stroke, color));
+}
+
+class _PlusPainter extends CustomPainter {
+  const _PlusPainter(this.stroke, this.color);
+  final double stroke;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    final inset = stroke / 2;
+    final mid = size.width / 2;
+    canvas.drawLine(Offset(mid, inset), Offset(mid, size.height - inset), paint);
+    canvas.drawLine(Offset(inset, mid), Offset(size.width - inset, mid), paint);
+  }
+
+  @override
+  bool shouldRepaint(_PlusPainter old) => old.stroke != stroke || old.color != color;
 }

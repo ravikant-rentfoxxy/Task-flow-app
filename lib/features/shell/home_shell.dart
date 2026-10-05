@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get/get.dart';
 
 import '../../core/format.dart';
@@ -26,6 +27,15 @@ class ShellController extends GetxController {
   String get tab => _tab.value;
 
   void go(String t) => _tab.value = t;
+
+  /// Status the Tasks tab should switch to next time it shows (e.g. 'DONE'
+  /// from the dashboard's "Recently done · See all"); cleared once applied.
+  final tasksStatus = RxnString();
+
+  void openTasks({required String status}) {
+    tasksStatus.value = status;
+    go('tasks');
+  }
 }
 
 class _Dest {
@@ -104,11 +114,12 @@ class _HomeShellState extends State<HomeShell> {
               if (canManage) _Dest('admin', me!.isAdmin ? 'Admin' : 'Manage', Icons.tune_outlined, Icons.tune_rounded),
             ]
           : const [
-              _Dest('home', 'Home', Icons.space_dashboard_outlined, Icons.space_dashboard_rounded),
-              _Dest('tasks', 'Tasks', Icons.task_alt_outlined, Icons.task_alt_rounded),
-              _Dest('chat', 'Chat', Icons.forum_outlined, Icons.forum_rounded),
-              _Dest('projects', 'Projects', Icons.folder_outlined, Icons.folder_rounded),
-              _Dest('more', 'More', Icons.grid_view_outlined, Icons.grid_view_rounded),
+              // Phone bar uses Tabler icons (same set as the Work Plus design).
+              _Dest('home', 'Home', TablerIcons.layout_dashboard, TablerIcons.layout_dashboard),
+              _Dest('tasks', 'Tasks', TablerIcons.circle_check, TablerIcons.circle_check),
+              _Dest('chat', 'Chat', TablerIcons.messages, TablerIcons.messages),
+              _Dest('projects', 'Projects', TablerIcons.folder, TablerIcons.folder),
+              _Dest('more', 'More', TablerIcons.layout_grid, TablerIcons.layout_grid),
             ];
 
       var activeId = shell.tab;
@@ -136,30 +147,10 @@ class _HomeShellState extends State<HomeShell> {
         final i = Icon(selected ? d.selectedIcon : d.icon);
         if (d.id != 'chat' || chatUnread == 0) return i;
         return Badge(
-          backgroundColor: wide ? TF.coral : Brand.navy,
-          textColor: wide ? null : Brand.lime,
+          backgroundColor: wide ? TF.coral : _navLime,
+          textColor: wide ? null : _navInk,
           label: Text(chatUnread > 9 ? '9+' : '$chatUnread'),
           child: i,
-        );
-      }
-
-      // Phone bar: active icon gets a small lime dot underneath.
-      Widget navIcon(_Dest d, bool selected) {
-        if (!selected) return icon(d, false);
-        return Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            icon(d, true),
-            Positioned(
-              bottom: -6,
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(color: Brand.lime, shape: BoxShape.circle),
-              ),
-            ),
-          ],
         );
       }
 
@@ -200,44 +191,92 @@ class _HomeShellState extends State<HomeShell> {
       }
 
       return Scaffold(
+        backgroundColor: _navPage,
         body: stack,
-        bottomNavigationBar: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: Brand.outline.withValues(alpha: 0.6))),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, -4))],
-          ),
-          child: NavigationBarTheme(
-            data: NavigationBarThemeData(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.transparent,
-              indicatorColor: Colors.transparent,
-              overlayColor: WidgetStatePropertyAll(Brand.lime.withValues(alpha: 0.15)),
-              height: 70,
-              labelTextStyle: WidgetStateProperty.resolveWith(
-                (s) => TextStyle(
-                  fontSize: 12,
-                  fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-                  color: s.contains(WidgetState.selected) ? Brand.navy : Brand.onVariant,
-                ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: _navInk,
+                borderRadius: BorderRadius.circular(99),
+                boxShadow: [BoxShadow(color: _navInk.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 6))],
               ),
-              iconTheme: WidgetStateProperty.resolveWith(
-                (s) => IconThemeData(color: s.contains(WidgetState.selected) ? Brand.navy : Brand.onVariant, size: 25),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (var i = 0; i < dests.length; i++)
+                    _PillNavItem(
+                      key: ValueKey('nav-${dests[i].id}'),
+                      label: dests[i].label,
+                      icon: icon(dests[i], i == index),
+                      selected: i == index,
+                      onTap: () => shell.go(dests[i].id),
+                    ),
+                ],
               ),
-            ),
-            child: NavigationBar(
-              selectedIndex: index,
-              onDestinationSelected: (i) => shell.go(dests[i].id),
-              destinations: [
-                for (final d in dests)
-                  NavigationDestination(key: ValueKey('nav-${d.id}'), icon: navIcon(d, false), selectedIcon: navIcon(d, true), label: d.label),
-              ],
             ),
           ),
         ),
       );
     }
   }
+}
+
+// Floating phone bar palette (matches the home design).
+const _navInk = Color(0xFF111A2E);
+const _navLime = Color(0xFFD7F83A);
+const _navIdle = Color(0xFF8F9BB5);
+const _navPage = Color(0xFFF6F7FB);
+
+/// Floating-bar item: lime pill with icon + label when selected, otherwise a
+/// round slate icon.
+class _PillNavItem extends StatelessWidget {
+  const _PillNavItem({super.key, required this.label, required this.icon, required this.selected, required this.onTap});
+  final String label;
+  final Widget icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: label,
+    child: Material(
+      color: selected ? _navLime : Colors.transparent,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: _navLime.withValues(alpha: 0.2),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          height: 44,
+          constraints: const BoxConstraints(minWidth: 44),
+          padding: EdgeInsets.symmetric(horizontal: selected ? 16 : 0),
+          alignment: Alignment.center,
+          child: IconTheme(
+            data: IconThemeData(color: selected ? _navInk : _navIdle, size: selected ? 22 : 24),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                icon,
+                if (selected) ...[
+                  const SizedBox(width: 6),
+                  Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _navInk)),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _Brand extends StatelessWidget {

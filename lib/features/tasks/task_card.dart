@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:get/get.dart';
 
 import '../../core/format.dart';
@@ -240,16 +241,19 @@ class _IconAction extends StatelessWidget {
 }
 
 class _TaskMenu extends StatelessWidget {
-  const _TaskMenu({required this.task, required this.onChanged});
+  const _TaskMenu({required this.task, required this.onChanged, this.icon});
   final Task task;
   final VoidCallback onChanged;
+
+  /// Overrides the default "more" icon (e.g. Tabler dots on the Tasks card).
+  final Widget? icon;
 
   @override
   Widget build(BuildContext context) {
     final me = Get.find<AuthController>().me;
     return PopupMenuButton<String>(
       key: ValueKey('task-menu-${task.id}'),
-      icon: const Icon(Icons.more_horiz_rounded, color: TF.muted, size: 20),
+      icon: icon ?? const Icon(Icons.more_horiz_rounded, color: TF.muted, size: 20),
       tooltip: 'Actions',
       onSelected: (v) async {
         if (v == 'subtask') {
@@ -319,7 +323,7 @@ class TaskList extends StatelessWidget {
         return Column(children: [
           for (final t in tasks)
             Padding(
-              padding: EdgeInsets.only(bottom: roomy ? 14 : 10),
+              padding: const EdgeInsets.only(bottom: 10),
               child: _card(t),
             ),
         ]);
@@ -333,24 +337,45 @@ class TaskList extends StatelessWidget {
   }
 }
 
-const _red = Color(0xFFDC2626);
-const _redSoft = Color(0xFFFEE2E2);
-const _amberInk = Color(0xFF92400E);
-const _amberSoft = Color(0xFFFFFBEB);
-const _amberLine = Color(0x99FDE68A);
-const _edgeGrey = Color(0xFFCBD5E1);
 
-/// Compact list row (Tasks tab, project detail), lime-on-navy: an
-/// urgency-coloured left edge, a tappable status tag with priority / alert
-/// tags and the SLA timer or due date, a two-line title, an optional
-/// blocked / discuss reason, and one meta line (assignee, team, project, ETA,
-/// subtask progress, comments, chat and the menu).
+// Tasks-tab card palette (matches the Work Plus design).
+const _tInk = Color(0xFF111A2E);
+const _tMuted = Color(0xFF6B7691);
+const _tLine = Color(0xFFE3E6EF);
+const _tDivider = Color(0xFFECEEF3);
+const _tChip = Color(0xFFEBEEF5);
+const _tLime = Color(0xFFD7F83A);
+const _tRed = Color(0xFFD03B3B);
+
+/// Tasks-tab card: priority, type and alert pills with the status pill on the
+/// right, the title, the due time, an optional blocked / discuss reason, then
+/// a divider and the assignee "by" creator line with subtask progress,
+/// comments, chat and the menu (Tabler icons).
 class RoomyTaskCard extends StatelessWidget {
   const RoomyTaskCard({super.key, required this.task, required this.onChanged, this.action});
 
   final Task task;
   final VoidCallback onChanged;
   final Widget? action;
+
+  static ({Color fg, Color bg, Color dot}) _priority(String p) => switch (p) {
+    'URGENT' => (fg: const Color(0xFFA32C2C), bg: const Color(0xFFFDE8E7), dot: const Color(0xFFE34948)),
+    'HIGH' => (fg: const Color(0xFF7A4A06), bg: const Color(0xFFFEF1D6), dot: const Color(0xFFF59E0B)),
+    _ => (fg: const Color(0xFF4A5470), bg: _tChip, dot: const Color(0xFF8F9BB5)),
+  };
+
+  /// "Today, 6:00 PM", "Tomorrow, 9:30 AM" or "12 Aug, 7:23 PM".
+  static String _when(DateTime d) {
+    final now = DateTime.now();
+    final diff = DateTime(d.year, d.month, d.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+    final day = switch (diff) {
+      0 => 'Today',
+      1 => 'Tomorrow',
+      -1 => 'Yesterday',
+      _ => fmtShortDate(d),
+    };
+    return '$day, ${fmtTime(d)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,180 +385,153 @@ class RoomyTaskCard extends StatelessWidget {
     final slaRunning = task.status == 'ASSIGNED' && task.slaBreachedAt == null && task.slaDeadlineAt != null;
     final noResponse = task.slaBreachedAt != null && task.status == 'ASSIGNED';
     final chatTarget = chatTargetForTask(task, me?.id);
-    final active = task.status == 'IN_PROGRESS' || task.status == 'ACKNOWLEDGED';
-    final hot = task.priority == 'URGENT' || task.isBlocked || overdue || noResponse || needsAction || task.status == 'ESCALATED';
-    final edge = hot
-        ? _red
-        : task.priority == 'HIGH' || slaRunning
-        ? const Color(0xFFF59E0B)
-        : active
-        ? Brand.lime
-        : _edgeGrey;
-    final team = task.assigneeName != null ? task.teamName : null;
-    final eta = task.etaAt != null && !closedStatuses.contains(task.status) ? task.etaAt : null;
+    final p = _priority(task.priority);
 
     final tags = <Widget>[
-      _StatusButton(
-        status: task.status,
-        danger: task.isBlocked || task.status == 'ESCALATED' || task.status == 'REJECTED',
-        onTap: () => _openStatusFor(context, task, onChanged),
-      ),
-      if (task.priority == 'URGENT')
-        const _Chip('URGENT', fg: Color(0xFF991B1B), bg: _redSoft, bold: true)
-      else if (task.priority == 'HIGH')
-        const _Chip('HIGH', fg: Color(0xFF78350F), bg: Color(0xFFFEF3C7), bold: true)
-      else
-        _Chip(titleCase(task.priority), fg: Brand.onVariant, bg: Colors.white, border: Brand.outline),
-      if (needsAction) const _Chip('Action needed', fg: Colors.white, bg: _red, bold: true),
-      if (task.isBlocked) const _Chip('Blocked', fg: Color(0xFF78350F), bg: Color(0xFFFEF3C7), icon: Icons.block_rounded, bold: true),
-      if (noResponse) const _Chip('No response', fg: Color(0xFF991B1B), bg: _redSoft, icon: Icons.timer_off_outlined, bold: true),
-      if (task.typeName != null) _Chip(task.typeName!, fg: Brand.onVariant, bg: Brand.surfaceLow),
+      _TPill(titleCase(task.priority), fg: p.fg, bg: p.bg, dot: p.dot),
+      if (task.typeName != null) _TPill(task.typeName!, fg: const Color(0xFF4A5470), bg: _tChip),
+      if (needsAction) const _TPill('Action needed', fg: Colors.white, bg: _tRed),
+      if (task.isBlocked) const _TPill('Blocked', fg: Color(0xFF7A4A06), bg: Color(0xFFFEF1D6), icon: TablerIcons.ban),
+      if (noResponse)
+        const _TPill('No response', fg: Color(0xFFA32C2C), bg: Color(0xFFFDE8E7), icon: TablerIcons.clock_off)
+      else if (slaRunning)
+        _TPill(countdown(task.slaDeadlineAt), fg: const Color(0xFF7A4A06), bg: const Color(0xFFFEF1D6), icon: TablerIcons.hourglass),
     ];
-
-    final trailing = slaRunning
-        ? DashTimer(countdown(task.slaDeadlineAt), fg: _amberInk, bg: _amberSoft, border: _amberLine, dot: const Color(0xFFF59E0B))
-        : _DueLine(task: task, overdue: overdue);
 
     final discuss = (task.discussReason ?? '').trim();
     final blockedReason = (task.blockedReason ?? '').trim();
     final reason = task.isBlocked && blockedReason.isNotEmpty
         ? 'Blocked: $blockedReason'
         : (needsAction && discuss.isNotEmpty ? discuss : null);
+    final due = task.dueAt;
+    final assignee = task.memberCount > 0 ? '${task.who} +${task.memberCount}' : task.who;
 
-    return Container(
+    return Material(
       key: ValueKey('task-card-${task.id}'),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: needsAction ? const Color(0x55DC2626) : Brand.outline),
-        boxShadow: [BoxShadow(color: Brand.navy.withValues(alpha: 0.03), blurRadius: 3, offset: const Offset(0, 1))],
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: needsAction ? _tRed.withValues(alpha: 0.35) : _tLine),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)));
-            onChanged();
-          },
-          child: Stack(
+      child: InkWell(
+        onTap: () async {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)));
+          onChanged();
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 4, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: Wrap(spacing: 6, runSpacing: 6, children: tags)),
+                  const SizedBox(width: 8),
+                  _TStatus(status: task.status, onTap: () => _openStatusFor(context, task, onChanged)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                task.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _tInk, height: 1.3),
+              ),
+              if (due != null) ...[
+                const SizedBox(height: 6),
+                Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Wrap(spacing: 5, runSpacing: 5, crossAxisAlignment: WrapCrossAlignment.center, children: tags),
-                          ),
-                          const SizedBox(width: 8),
-                          ConstrainedBox(constraints: const BoxConstraints(maxWidth: 140), child: trailing),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
+                    Icon(TablerIcons.clock, size: 16, color: overdue ? _tRed : _tMuted),
+                    const SizedBox(width: 6),
+                    Flexible(
                       child: Text(
-                        task.title,
-                        maxLines: 2,
+                        overdue ? 'Overdue · ${_when(due)}' : _when(due),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Brand.navy, height: 1.3, letterSpacing: -0.1),
+                        style: TextStyle(fontSize: 13, color: overdue ? _tRed : _tMuted, fontWeight: overdue ? FontWeight.w600 : FontWeight.w400),
                       ),
                     ),
-                    if (reason != null) ...[
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                  ],
+                ),
+              ],
+              if (reason != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(task.isBlocked ? TablerIcons.ban : TablerIcons.alert_circle, size: 15, color: const Color(0xFF7A4A06)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        reason,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF7A4A06)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Divider(height: 1, thickness: 1, color: _tDivider),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: canReassignTask(task, me) ? () => _reassignFor(context, task, onChanged) : null,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
                           children: [
-                            Icon(
-                              task.isBlocked ? Icons.block_rounded : Icons.notifications_active_outlined,
-                              size: 13,
-                              color: _amberInk,
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                reason,
+                            _TAvatar(task.assigneeName ?? task.teamName),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(text: assignee, style: const TextStyle(fontWeight: FontWeight.w600, color: _tInk)),
+                                    TextSpan(text: '  by ${displayName(task.creatorName)}'),
+                                  ],
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: _amberInk),
+                                style: const TextStyle(fontSize: 13.5, color: _tMuted),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: canReassignTask(task, me) ? () => _reassignFor(context, task, onChanged) : null,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Row(
-                                children: [
-                                  Avatar(task.assigneeName ?? task.teamName, size: 20),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text.rich(
-                                      TextSpan(
-                                        children: [
-                                          TextSpan(text: task.who, style: const TextStyle(fontWeight: FontWeight.w700, color: Brand.navy)),
-                                          if (task.memberCount > 0) TextSpan(text: ' +${task.memberCount}'),
-                                          if (team != null) TextSpan(text: '  •  $team'),
-                                          if (task.projectName != null)
-                                            TextSpan(text: '  •  ${task.projectName}')
-                                          else
-                                            TextSpan(text: '  •  by ${displayName(task.creatorName)}'),
-                                          if (eta != null) TextSpan(text: '  •  ETA ${fmtShortDate(eta)}'),
-                                        ],
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 11.5, color: Brand.onVariant),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (task.subtaskCount > 0) _Checklist(done: task.subtaskDone, total: task.subtaskCount),
-                        _IconAction(
-                          key: ValueKey('comments-${task.id}'),
-                          icon: Icons.chat_bubble_outline_rounded,
-                          label: task.commentCount > 0 ? '${task.commentCount}' : null,
-                          tooltip: 'Comments',
-                          onTap: () => _commentsFor(context, task, onChanged),
-                        ),
-                        if (chatTarget != null)
-                          _IconAction(
-                            icon: Icons.forum_outlined,
-                            tooltip: task.assigneeId == me?.id ? 'Chat with assigner' : 'Chat with assignee',
-                            onTap: () => openChatWithUser(context, chatTarget, attachTask: task),
-                          ),
-                        _TaskMenu(task: task, onChanged: onChanged),
-                      ],
                     ),
-                    if (action != null) ...[
-                      const SizedBox(height: 2),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12, bottom: 6),
-                        child: SizedBox(width: double.infinity, child: action),
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                  if (task.subtaskCount > 0) _TSubtasks(done: task.subtaskDone, total: task.subtaskCount),
+                  _TIconButton(
+                    key: ValueKey('comments-${task.id}'),
+                    icon: TablerIcons.message,
+                    label: task.commentCount > 0 ? '${task.commentCount}' : null,
+                    tooltip: 'Comments',
+                    onTap: () => _commentsFor(context, task, onChanged),
+                  ),
+                  if (chatTarget != null)
+                    _TIconButton(
+                      icon: TablerIcons.messages,
+                      tooltip: task.assigneeId == me?.id ? 'Chat with assigner' : 'Chat with assignee',
+                      onTap: () => openChatWithUser(context, chatTarget, attachTask: task),
+                    ),
+                  _TaskMenu(
+                    task: task,
+                    onChanged: onChanged,
+                    icon: const Icon(TablerIcons.dots, color: _tMuted, size: 20),
+                  ),
+                ],
               ),
-              Positioned(left: 0, top: 0, bottom: 0, child: Container(width: 4, color: edge)),
+              if (action != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, bottom: 8),
+                  child: SizedBox(width: double.infinity, child: action),
+                ),
             ],
           ),
         ),
@@ -542,55 +540,106 @@ class RoomyTaskCard extends StatelessWidget {
   }
 }
 
-/// Due date for the tag row: "Today, 6:00 PM" — red with an alert icon once
-/// overdue; nothing when there is no due date.
-class _DueLine extends StatelessWidget {
-  const _DueLine({required this.task, required this.overdue});
-  final Task task;
-  final bool overdue;
+/// Rounded pill with a leading dot or icon.
+class _TPill extends StatelessWidget {
+  const _TPill(this.label, {required this.fg, required this.bg, this.dot, this.icon});
+  final String label;
+  final Color fg;
+  final Color bg;
+  final Color? dot;
+  final IconData? icon;
 
-  static String _when(DateTime d) {
-    final now = DateTime.now();
-    final day = DateTime(d.year, d.month, d.day);
-    final diff = day.difference(DateTime(now.year, now.month, now.day)).inDays;
-    final label = switch (diff) {
-      0 => 'Today',
-      1 => 'Tomorrow',
-      -1 => 'Yesterday',
-      _ => fmtShortDate(d),
-    };
-    return '$label, ${fmtTime(d)}';
-  }
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (dot != null) ...[
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+        ] else if (icon != null) ...[
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 4),
+        ],
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: fg),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Status pill with a chevron that opens the status sheet; green with a check
+/// when done, lime for active work, otherwise the status colours.
+class _TStatus extends StatelessWidget {
+  const _TStatus({required this.status, required this.onTap});
+  final String status;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final due = task.dueAt;
-    if (due == null) return const SizedBox.shrink();
-    final color = overdue ? _red : Brand.onVariant;
-    return Padding(
-      padding: const EdgeInsets.only(top: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(overdue ? Icons.event_busy_rounded : Icons.schedule_rounded, size: 13, color: color),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              overdue ? 'Overdue · ${_when(due)}' : _when(due),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: overdue ? _red : Brand.navy),
-            ),
+    final done = status == 'DONE';
+    final active = status == 'IN_PROGRESS' || status == 'ACKNOWLEDGED';
+    final danger = status == 'ESCALATED' || status == 'REJECTED';
+    final c = TF.status(status);
+    final fg = done ? const Color(0xFF14693A) : (active ? _tInk : (danger ? const Color(0xFFA32C2C) : c.fg));
+    final bg = done ? const Color(0xFFE6F6EC) : (active ? _tLime : (danger ? const Color(0xFFFDE8E7) : c.bg));
+    return Material(
+      key: ValueKey('status-$status'),
+      color: bg,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 5, 8, 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (done) ...[Icon(TablerIcons.check, size: 14, color: fg), const SizedBox(width: 5)],
+              Text(statusLabel(status), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: fg)),
+              const SizedBox(width: 4),
+              Icon(TablerIcons.chevron_down, size: 14, color: fg),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// "3/4" subtasks with a tiny lime bar, for the meta line.
-class _Checklist extends StatelessWidget {
-  const _Checklist({required this.done, required this.total});
+/// Navy circle with a lime initial.
+class _TAvatar extends StatelessWidget {
+  const _TAvatar(this.name);
+  final String? name;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 22,
+    height: 22,
+    alignment: Alignment.center,
+    decoration: const BoxDecoration(color: _tInk, shape: BoxShape.circle),
+    child: Text(
+      initials(name).characters.take(1).toString(),
+      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _tLime),
+    ),
+  );
+}
+
+/// "1/1" with a short lime bar.
+class _TSubtasks extends StatelessWidget {
+  const _TSubtasks({required this.done, required this.total});
   final int done;
   final int total;
 
@@ -598,106 +647,57 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) => Tooltip(
     message: '$done of $total subtasks completed',
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: 28,
+            width: 24,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
                 value: subtaskPercent(done, total) / 100,
                 minHeight: 5,
-                color: Brand.lime,
-                backgroundColor: Brand.navy.withValues(alpha: 0.1),
+                color: _tLime,
+                backgroundColor: _tChip,
               ),
             ),
           ),
-          const SizedBox(width: 4),
-          Text('$done/$total', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Brand.navy)),
+          const SizedBox(width: 6),
+          Text('$done/$total', style: const TextStyle(fontSize: 13, color: _tInk)),
         ],
       ),
     ),
   );
 }
 
-/// Status tag that opens the status sheet: lime-light for active work, red
-/// when blocked / escalated / rejected, otherwise the status colours.
-class _StatusButton extends StatelessWidget {
-  const _StatusButton({required this.status, required this.onTap, this.danger = false});
-  final String status;
+/// Slate Tabler icon button with an optional count.
+class _TIconButton extends StatelessWidget {
+  const _TIconButton({super.key, required this.icon, required this.onTap, this.label, this.tooltip});
+  final IconData icon;
   final VoidCallback onTap;
-  final bool danger;
+  final String? label;
+  final String? tooltip;
 
   @override
-  Widget build(BuildContext context) {
-    final active = status == 'IN_PROGRESS' || status == 'ACKNOWLEDGED';
-    final c = TF.status(status);
-    final plain = closedStatuses.contains(status);
-    final fg = danger ? _red : (active || plain ? Brand.navy : c.fg);
-    final bg = danger ? const Color(0xFFFEF2F2) : (active ? Brand.limeLight : (plain ? Brand.surfaceLow : c.bg));
-    final side = danger ? const Color(0x55DC2626) : (active ? Brand.limeDim.withValues(alpha: 0.5) : Colors.transparent);
-    return Material(
-      key: ValueKey('status-$status'),
-      color: bg,
-      shape: StadiumBorder(side: BorderSide(color: side)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 3, 4, 3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  statusLabel(status),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
-                ),
-              ),
-              Icon(Icons.arrow_drop_down_rounded, size: 18, color: fg),
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip ?? '',
+    child: InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: _tMuted),
+            if (label != null) ...[
+              const SizedBox(width: 3),
+              Text(label!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _tInk)),
             ],
-          ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-/// Small rounded tag used on list rows: optional icon, optional border.
-class _Chip extends StatelessWidget {
-  const _Chip(this.label, {required this.fg, required this.bg, this.border, this.icon, this.bold = false});
-  final String label;
-  final Color fg;
-  final Color bg;
-  final Color? border;
-  final IconData? icon;
-  final bool bold;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(6),
-      border: border != null ? Border.all(color: border!) : null,
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (icon != null) ...[Icon(icon, size: 12, color: fg), const SizedBox(width: 4)],
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: fg, fontSize: 10.5, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, letterSpacing: 0.2),
-          ),
-        ),
-      ],
     ),
   );
 }
@@ -1021,6 +1021,273 @@ class DashTimer extends StatelessWidget {
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg),
           ),
         ),
+      ],
+    ),
+  );
+}
+
+// ── Home (dashboard) card ─────────────────────────────────────────────────
+
+const _hInk = Color(0xFF111A2E);
+const _hMuted = Color(0xFF6B7691);
+const _hLine = Color(0xFFE3E6EF);
+const _hChip = Color(0xFFEBEEF5);
+const _hLime = Color(0xFFD7F83A);
+
+/// Home-screen task card: priority pill · status pill, the title, then the
+/// person, subtask meter, comments, chat and menu. [actions] render as
+/// equal-width buttons along the bottom.
+class HomeTaskCard extends StatelessWidget {
+  const HomeTaskCard({super.key, required this.task, required this.onChanged, this.actions = const []});
+
+  final Task task;
+  final VoidCallback onChanged;
+  final List<Widget> actions;
+
+  static ({Color fg, Color bg, Color dot}) _priority(String p) => switch (p) {
+    'URGENT' => (fg: const Color(0xFF8A1612), bg: const Color(0xFFFDE8E7), dot: const Color(0xFFE5322D)),
+    'HIGH' => (fg: const Color(0xFF7A4A06), bg: const Color(0xFFFEF1D6), dot: const Color(0xFFF59E0B)),
+    _ => (fg: const Color(0xFF4A5470), bg: _hChip, dot: const Color(0xFF8F9BB5)),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final me = Get.find<AuthController>().me;
+    final overdue = isTaskOverdue(task);
+    final needsAction = taskNeedsActionForViewer(task, me);
+    final slaRunning = task.status == 'ASSIGNED' && task.slaBreachedAt == null && task.slaDeadlineAt != null;
+    final noResponse = task.slaBreachedAt != null && task.status == 'ASSIGNED';
+    final chatTarget = chatTargetForTask(task, me?.id);
+    final mineToDo = task.assigneeId != null && task.assigneeId == me?.id;
+    final person = mineToDo ? displayName(task.creatorName) : task.who;
+    final p = _priority(task.priority);
+    final eta = task.etaAt != null && !closedStatuses.contains(task.status) ? task.etaAt : null;
+
+    final tags = <Widget>[
+      _HomePill(titleCase(task.priority), fg: p.fg, bg: p.bg, dot: p.dot),
+      if (needsAction) const _HomePill('Action needed', fg: Colors.white, bg: Color(0xFFE5322D)),
+      if (overdue && task.status != 'ESCALATED') const _HomePill('Overdue', fg: Color(0xFF8A1612), bg: Color(0xFFFDE8E7)),
+      if (task.isBlocked) const _HomePill('Blocked', fg: Color(0xFF7A4A06), bg: Color(0xFFFEF1D6), icon: Icons.block_rounded),
+      if (noResponse)
+        const _HomePill('No response', fg: Color(0xFF8A1612), bg: Color(0xFFFDE8E7), icon: Icons.timer_off_outlined)
+      else if (slaRunning)
+        _HomePill(countdown(task.slaDeadlineAt), fg: const Color(0xFF7A4A06), bg: const Color(0xFFFEF1D6), icon: Icons.timer_outlined),
+    ];
+
+    return Material(
+      key: ValueKey('task-card-${task.id}'),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: needsAction ? const Color(0x55E5322D) : _hLine),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () async {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)));
+          onChanged();
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 6, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: Wrap(spacing: 6, runSpacing: 6, children: tags)),
+                    const SizedBox(width: 8),
+                    _HomeStatus(status: task.status, onTap: () => _openStatusFor(context, task, onChanged)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  task.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _hInk, height: 1.3),
+                ),
+              ),
+              if (eta != null || task.projectName != null) ...[
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    [
+                      if (task.projectName != null) task.projectName!,
+                      if (eta != null) 'ETA ${DashboardTaskCard._etaLabel(eta)}',
+                    ].join('  •  '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: _hMuted),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: canReassignTask(task, me) ? () => _reassignFor(context, task, onChanged) : null,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Avatar(mineToDo ? task.creatorName : (task.assigneeName ?? task.teamName), size: 22),
+                            const SizedBox(width: 7),
+                            Flexible(
+                              child: Text(
+                                task.memberCount > 0 ? '$person +${task.memberCount}' : person,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, color: _hMuted),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (task.subtaskCount > 0) _HomeSubtasks(done: task.subtaskDone, total: task.subtaskCount),
+                  _IconAction(
+                    key: ValueKey('comments-${task.id}'),
+                    icon: Icons.chat_bubble_outline_rounded,
+                    label: task.commentCount > 0 ? '${task.commentCount}' : null,
+                    tooltip: 'Comments',
+                    onTap: () => _commentsFor(context, task, onChanged),
+                  ),
+                  if (chatTarget != null)
+                    _IconAction(
+                      icon: Icons.forum_outlined,
+                      tooltip: task.assigneeId == me?.id ? 'Chat with assigner' : 'Chat with assignee',
+                      onTap: () => openChatWithUser(context, chatTarget, attachTask: task),
+                    ),
+                  _TaskMenu(task: task, onChanged: onChanged),
+                ],
+              ),
+              if (actions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 2, 8, 8),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < actions.length; i++) ...[if (i > 0) const SizedBox(width: 8), Expanded(child: actions[i])],
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Rounded pill with a leading dot or icon.
+class _HomePill extends StatelessWidget {
+  const _HomePill(this.label, {required this.fg, required this.bg, this.dot, this.icon});
+  final String label;
+  final Color fg;
+  final Color bg;
+  final Color? dot;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (dot != null) ...[
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+        ] else if (icon != null) ...[
+          Icon(icon, size: 12, color: fg),
+          const SizedBox(width: 4),
+        ],
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Status pill that opens the status sheet: green with a check when done,
+/// lime for active work, otherwise the status colours.
+class _HomeStatus extends StatelessWidget {
+  const _HomeStatus({required this.status, required this.onTap});
+  final String status;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = status == 'DONE';
+    final active = status == 'IN_PROGRESS' || status == 'ACKNOWLEDGED';
+    final c = TF.status(status);
+    final fg = done ? const Color(0xFF14693A) : (active ? _hInk : c.fg);
+    final bg = done ? const Color(0xFFE6F6EC) : (active ? _hLime : c.bg);
+    return Material(
+      key: ValueKey('status-$status'),
+      color: bg,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (done) ...[Icon(Icons.check_rounded, size: 12, color: fg), const SizedBox(width: 4)],
+              Text(
+                statusLabel(status),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "1/1" with a short lime bar.
+class _HomeSubtasks extends StatelessWidget {
+  const _HomeSubtasks({required this.done, required this.total});
+  final int done;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 26,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(value: subtaskPercent(done, total) / 100, minHeight: 5, color: _hLime, backgroundColor: _hChip),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text('$done/$total', style: const TextStyle(fontSize: 12, color: _hInk)),
       ],
     ),
   );
