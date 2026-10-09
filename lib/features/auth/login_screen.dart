@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../state/auth_controller.dart';
 import '../../theme/app_theme.dart';
@@ -87,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     autofillHints: const [AutofillHints.email],
                     textInputAction: TextInputAction.next,
                     style: AuthUi.inputText,
-                    decoration: AuthUi.input(hint: 'you@rentfoxxy.com'),
+                    decoration: AuthUi.input(hint: 'you@company.com'),
                   ),
                   const SizedBox(height: 20),
                   const _Label('Password'),
@@ -145,6 +146,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     arrow: false,
                     onPressed: busy ? null : _submit,
                   ),
+                  const SizedBox(height: 18),
+                  const _PrivacyNote(),
                 ],
               ),
             ),
@@ -334,5 +337,44 @@ class _Hero extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// "By signing in, you agree to our Privacy Policy." — the link opens in the
+/// external browser.
+class _PrivacyNote extends StatelessWidget {
+  const _PrivacyNote();
+
+  static final _url = Uri.parse('https://rentfoxxy.com/privacy-policy');
+
+  Future<void> _open() async {
+    if (!await launchUrl(_url, mode: LaunchMode.externalApplication)) toast('Could not open the privacy policy');
+  }
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    alignment: WrapAlignment.center,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      const Text('By signing in, you agree to our ', style: TextStyle(fontSize: 13.5, color: AuthUi.muted)),
+      InkWell(
+        key: const Key('privacy-policy'),
+        onTap: _open,
+        borderRadius: BorderRadius.circular(4),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: Text(
+            'Privacy Policy',
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: AuthUi.ink,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ),
+      const Text('.', style: TextStyle(fontSize: 13.5, color: AuthUi.muted)),
+    ],
   );
 }

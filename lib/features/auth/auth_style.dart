@@ -17,21 +17,22 @@ class AuthUi {
   static const limeLine = Color(0xFFE4F0A6);
   static const olive = Color(0xFF4D6B00);
   static const field = Color(0xFFF3F6E6);
+  static const fieldLine = Color(0xFFE5E7EB);
   static const success = Color(0xFF3F7A12);
 
   static const inputText = TextStyle(fontSize: 16.5, color: ink, letterSpacing: 0.1);
 
-  /// Lime-tinted field; [outlined] adds a thin lime border when idle.
+  /// White field with a thin grey border when idle ([outlined] makes it lime).
   static InputDecoration input({required String hint, IconData? icon, Widget? suffix, bool outlined = false}) {
     final idle = OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: outlined ? const BorderSide(color: limeLine, width: 1.2) : BorderSide.none,
+      borderSide: BorderSide(color: outlined ? limeLine : fieldLine, width: 1.2),
     );
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: faint, fontSize: 16),
       filled: true,
-      fillColor: field,
+      fillColor: Colors.white,
       isDense: false,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       prefixIcon: icon == null

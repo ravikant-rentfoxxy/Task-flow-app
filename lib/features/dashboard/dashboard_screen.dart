@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:upgrader/upgrader.dart';
 
 import '../../core/format.dart';
 import '../../core/task_logic.dart';
@@ -118,7 +119,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Obx(() => _reactiveBuild(context));
+  // Forced store update prompt. It lives here so it only appears while the
+  // dashboard tab is showing; the tab read below re-checks on every switch back.
+  Widget build(BuildContext context) {
+    if (!Get.isRegistered<ShellController>()) return _upgradeAlert(context);
+    return Obx(() {
+      _onDashboard = Get.find<ShellController>().tab == 'home';
+      return _upgradeAlert(context);
+    });
+  }
+
+  bool _onDashboard = true;
+  late final _upgrader = _ForcedUpgrader(() => _onDashboard);
+
+  Widget _upgradeAlert(BuildContext context) => UpgradeAlert(
+    upgrader: _upgrader,
+    dialogStyle: Theme.of(context).platform == TargetPlatform.iOS ? UpgradeDialogStyle.cupertino : UpgradeDialogStyle.material,
+    showIgnore: false,
+    showLater: false,
+    barrierDismissible: false,
+    shouldPopScope: () => false,
+    child: Obx(() => _reactiveBuild(context)),
+  );
 
   Widget _reactiveBuild(BuildContext context) {
     final me = Get.find<AuthController>().me;
@@ -185,7 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 12),
                           if (mine == null && error == null)
-                            const SkeletonList(count: 3)
+                            const _MetricsSkeleton()
                           else if (error != null && mine == null)
                             ErrorView(message: error!, onRetry: _load)
                           else ...[
@@ -269,6 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                           if (canFilter && online.isNotEmpty) ...[const SizedBox(height: 8), _OnlineStrip(users: online)],
                           const SizedBox(height: 18),
+                          if (mine == null && error == null) const _SectionSkeleton(),
                           if (mine != null) ...[
                             _section('To accept', '30-min SLA', needsAck, icon: (Icons.timer_outlined, _lime, _ink), key: _acceptKey, actions: (t) => _acceptActions(t, me)),
                             if (escalated.isNotEmpty) _EscalatedPanel(key: _escalatedKey, tasks: escalated, me: me, onChanged: _load),
@@ -391,6 +414,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
+
+/// Store update check that can't be postponed: the prompt comes back every
+/// time the app resumes (e.g. returning from the store without updating), but
+/// only while the dashboard is the visible tab.
+class _ForcedUpgrader extends Upgrader {
+  _ForcedUpgrader(this._visible) : super(durationUntilAlertAgain: Duration.zero);
+  final bool Function() _visible;
+
+  @override
+  bool shouldDisplayUpgrade() => _visible() && super.shouldDisplayUpgrade();
 }
 
 // Home palette (matches the Work Plus home design).
@@ -878,6 +912,107 @@ class _MetricTile extends StatelessWidget {
           ],
         ),
       ),
+    ),
+  );
+}
+
+/// Shimmering stand-in for [_Metrics] while the first load runs.
+class _MetricsSkeleton extends StatelessWidget {
+  const _MetricsSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Shimmer(
+    child: LayoutBuilder(
+      builder: (context, c) {
+        final cols = c.maxWidth >= 680 ? 4 : 2;
+        final w = (c.maxWidth - (cols - 1) * 10) / cols;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (var i = 0; i < 4; i++)
+              Container(
+                width: w,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                child: Row(
+                  children: [
+                    const SkeletonBox(width: 34, height: 34, radius: 10),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SkeletonBox(width: 28, height: 18),
+                          const SizedBox(height: 6),
+                          FractionallySizedBox(widthFactor: 0.7, child: const SkeletonBox(height: 10)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+/// Shimmering section title + task cards while the first load runs.
+class _SectionSkeleton extends StatelessWidget {
+  const _SectionSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Shimmer(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(2, 0, 2, 10),
+          child: Row(
+            children: [
+              SkeletonBox(width: 28, height: 28, radius: 9),
+              SizedBox(width: 9),
+              SkeletonBox(width: 110, height: 14),
+              SizedBox(width: 8),
+              SkeletonBox(width: 26, height: 16, radius: 99),
+            ],
+          ),
+        ),
+        for (var i = 0; i < 3; i++)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    SkeletonBox(width: 64, height: 18, radius: 99),
+                    Spacer(),
+                    SkeletonBox(width: 48, height: 12),
+                  ],
+                ),
+                SizedBox(height: 12),
+                SkeletonBox(height: 14),
+                SizedBox(height: 8),
+                FractionallySizedBox(widthFactor: 0.6, child: SkeletonBox(height: 14)),
+                SizedBox(height: 14),
+                Row(
+                  children: [
+                    SkeletonBox(width: 22, height: 22, radius: 99),
+                    SizedBox(width: 8),
+                    SkeletonBox(width: 90, height: 11),
+                    Spacer(),
+                    SkeletonBox(width: 70, height: 11),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ],
     ),
   );
 }

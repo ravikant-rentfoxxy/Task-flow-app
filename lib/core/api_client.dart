@@ -67,7 +67,7 @@ class ApiClient {
         dio = dio ?? Dio() {
     if (logRequests && !this.dio.interceptors.any((i) => i is ApiLogger)) this.dio.interceptors.add(ApiLogger());
     this.dio.options
-      ..connectTimeout = const Duration(seconds: 15)
+      ..connectTimeout = const Duration(seconds: 30)
       ..receiveTimeout = const Duration(seconds: 30)
       // Status handling (401 refresh, error messages) is done here, not by Dio.
       ..validateStatus = (_) => true;

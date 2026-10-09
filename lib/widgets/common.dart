@@ -249,6 +249,68 @@ class ErrorView extends StatelessWidget {
       );
 }
 
+/// Sweeps a soft highlight across its child's opaque shapes (skeleton boxes)
+/// while content loads.
+class Shimmer extends StatefulWidget {
+  const Shimmer({
+    super.key,
+    required this.child,
+    this.base = const Color(0xFFE6E9F0),
+    this.highlight = const Color(0xFFF7F8FB),
+  });
+  final Widget child;
+  final Color base;
+  final Color highlight;
+
+  @override
+  State<Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1300))..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        child: widget.child,
+        builder: (context, child) {
+          // Slide the band from off-left to off-right of the bounds.
+          final dx = -1.0 + 3.0 * _c.value;
+          return ShaderMask(
+            blendMode: BlendMode.srcATop,
+            shaderCallback: (bounds) => LinearGradient(
+              begin: Alignment(dx - 1, -0.3),
+              end: Alignment(dx, 0.3),
+              colors: [widget.base, widget.highlight, widget.base],
+              stops: const [0.1, 0.5, 0.9],
+            ).createShader(bounds),
+            child: child,
+          );
+        },
+      );
+}
+
+/// A rounded placeholder block, meant to sit inside a [Shimmer].
+class SkeletonBox extends StatelessWidget {
+  const SkeletonBox({super.key, this.width, this.height = 12, this.radius = 6});
+  final double? width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(radius)),
+      );
+}
+
 class SkeletonList extends StatelessWidget {
   const SkeletonList({super.key, this.count = 4, this.height = 96});
   final int count;

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <application android:usesCleartextTraffic="true"
+    <application
         android:label="Work Plus"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -41,6 +41,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher: open https links (e.g. the privacy policy) in a browser -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

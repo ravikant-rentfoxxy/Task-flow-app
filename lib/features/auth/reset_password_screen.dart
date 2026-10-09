@@ -150,7 +150,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       ),
       const SizedBox(height: 10),
       const Text(
-        'Enter your RentFoxxy work email and we will send you a 6-digit verification code.',
+        'Enter your work email and we will send you a 6-digit verification code.',
         textAlign: TextAlign.center,
         style: TextStyle(fontSize: 15.5, height: 1.5, color: AuthUi.muted),
       ),
@@ -179,7 +179,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         autofillHints: const [AutofillHints.email],
         onSubmitted: (_) => busy ? null : _request(),
         style: AuthUi.inputText,
-        decoration: AuthUi.input(hint: 'you@rentfoxxy.com', icon: Icons.mail_outline_rounded, outlined: true),
+        decoration: AuthUi.input(hint: 'you@company.com', icon: Icons.mail_outline_rounded, outlined: true),
       ),
       const SizedBox(height: 18),
       const _InfoTile(
@@ -747,7 +747,7 @@ class _OtpBoxes extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: active ? Colors.white : (digit != null ? AuthUi.limeSoft : AuthUi.field),
+        color: digit != null && !active ? AuthUi.limeSoft : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: active ? AuthUi.ink : AuthUi.limeLine, width: active ? 2 : 1),
         boxShadow: active ? [BoxShadow(color: AuthUi.lime.withValues(alpha: 0.9), spreadRadius: 3)] : null,
