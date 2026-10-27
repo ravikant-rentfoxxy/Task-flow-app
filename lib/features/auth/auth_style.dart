@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../widgets/common.dart';
 
@@ -202,4 +203,132 @@ class AuthTopBar extends StatelessWidget implements PreferredSizeWidget {
       ),
     ),
   );
+}
+
+/// Six digit boxes drawn over one invisible [TextField], so paste, autofill
+/// and backspace behave like a normal input.
+class AuthOtpBoxes extends StatelessWidget {
+  const AuthOtpBoxes({super.key, required this.fieldKey, required this.controller, required this.focusNode, this.enabled = true});
+  final Key fieldKey;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final code = controller.text;
+    return ListenableBuilder(
+      listenable: focusNode,
+      builder: (context, _) => SizedBox(
+        height: 64,
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                for (var i = 0; i < 6; i++) ...[if (i > 0) const SizedBox(width: 8), Expanded(child: _box(i, code, focusNode.hasFocus))],
+              ],
+            ),
+            Positioned.fill(
+              child: TextField(
+                key: fieldKey,
+                controller: controller,
+                enabled: enabled,
+                focusNode: focusNode,
+                keyboardType: TextInputType.number,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+                showCursor: false,
+                enableInteractiveSelection: false,
+                style: const TextStyle(color: Colors.transparent, fontSize: 1),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  counterText: '',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _box(int i, String code, bool focused) {
+    final active = focused && i == code.length.clamp(0, 5) && code.length < 6;
+    final digit = i < code.length ? code[i] : null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: digit != null && !active ? AuthUi.limeSoft : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: active ? AuthUi.ink : AuthUi.limeLine, width: active ? 2 : 1),
+        boxShadow: active ? [BoxShadow(color: AuthUi.lime.withValues(alpha: 0.9), spreadRadius: 3)] : null,
+      ),
+      child: digit != null
+          ? Text(
+              digit,
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AuthUi.ink),
+            )
+          : active
+          ? Container(width: 2, height: 28, color: AuthUi.ink)
+          : Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(color: Color(0xFFC7CBD3), shape: BoxShape.circle),
+            ),
+    );
+  }
+}
+
+/// Countdown pill that turns into a "Resend code" button at zero.
+class AuthResendPill extends StatelessWidget {
+  const AuthResendPill({super.key, required this.seconds, required this.onResend});
+  final int seconds;
+  final VoidCallback? onResend;
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = seconds > 0;
+    return Material(
+      color: waiting ? AuthUi.limeSoft : AuthUi.ink,
+      shape: StadiumBorder(side: BorderSide(color: waiting ? AuthUi.limeLine : AuthUi.ink)),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: waiting ? null : onResend,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(waiting ? Icons.timer_outlined : Icons.refresh_rounded, size: 20, color: waiting ? AuthUi.olive : AuthUi.lime),
+              const SizedBox(width: 10),
+              if (waiting)
+                Flexible(
+                  child: Text.rich(
+                    TextSpan(
+                      style: const TextStyle(fontSize: 15, color: AuthUi.label, fontWeight: FontWeight.w500),
+                      children: [
+                        const TextSpan(text: 'Resend code in '),
+                        TextSpan(
+                          text: '0:${seconds.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontWeight: FontWeight.w800, color: AuthUi.ink),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                const Text(
+                  'Resend code',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
